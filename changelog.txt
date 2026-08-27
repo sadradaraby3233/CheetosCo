@@ -1,6 +1,9 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.0.8
+  - Fixed radio button hint timer: it no longer nags you after you already use the left/right arrow keys.
+
 Version 0.0.7
   - Added inactivity hint for radio buttons ("Press left and right arrow keys to change" after 2s).
   - Initial work on data-driven Map Engine (MapEngine).

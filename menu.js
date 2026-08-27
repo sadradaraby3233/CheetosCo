@@ -77,13 +77,13 @@ const MenuSystem = (() => {
     if (!menu || menu.items.length === 0) return;
     const item = menu.items[menu.index];
     if (item && item.type === 'radio') {
+      clearHintTimer();
       const idx = item.options.indexOf(item.currentValue);
       const newIdx = (idx - 1 + item.options.length) % item.options.length;
       item.currentValue = item.options[newIdx];
       SoundBank.menuMove();
       if (item.onChange) item.onChange(item.currentValue);
       SoundBank.speak(item.currentValue, 1.2);
-      startHintTimer();
     }
   }
 
@@ -92,13 +92,13 @@ const MenuSystem = (() => {
     if (!menu || menu.items.length === 0) return;
     const item = menu.items[menu.index];
     if (item && item.type === 'radio') {
+      clearHintTimer();
       const idx = item.options.indexOf(item.currentValue);
       const newIdx = (idx + 1) % item.options.length;
       item.currentValue = item.options[newIdx];
       SoundBank.menuMove();
       if (item.onChange) item.onChange(item.currentValue);
       SoundBank.speak(item.currentValue, 1.2);
-      startHintTimer();
     }
   }
 
