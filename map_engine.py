@@ -123,24 +123,36 @@ class MapEngine:
         }
 
     def get_target_direction(self):
+        """Calculate direction to target relative to player facing."""
         tpos = self.get_target_position()
         if not tpos:
             return None
+        
         dx = tpos['x'] - self.player['x']
         dy = tpos['y'] - self.player['y']
         dist = math.sqrt(dx * dx + dy * dy)
-
-        angle_to = math.degrees(math.atan2(dx, -dy))
-        if angle_to < 0:
-            angle_to += 360
-
-        relative = angle_to - self.player['facing']
+        
+        # Calculate absolute angle to target (0=N, 90=E, 180=S, 270=W)
+        # atan2(dx, -dy) gives angle from north, clockwise positive
+        angle_to_target = math.degrees(math.atan2(dx, -dy))
+        if angle_to_target < 0:
+            angle_to_target += 360
+        
+        # Calculate relative angle from player's facing direction
+        relative = angle_to_target - self.player['facing']
+        
+        # Normalize to -180..180
         while relative > 180:
             relative -= 360
         while relative < -180:
             relative += 360
-
-        return {'dist': dist, 'relative': relative}
+        
+        return {
+            'dist': dist,
+            'relative': relative,
+            'absolute': angle_to_target,
+            'pan': relative / 90.0  # Convert to -2..2 range for panning
+        }
 
     def check_arrival(self):
         if not self.tracked_target:
@@ -176,13 +188,28 @@ class MapEngine:
         if not self.check_collision(nx, ny, self.player['z']):
             self.player['x'] = nx
             self.player['y'] = ny
+            
+            # Update facing based on movement direction
             if dy < 0:
-                self.player['facing'] = 0
+                self.player['facing'] = 0      # North
             elif dx > 0:
-                self.player['facing'] = 90
+                self.player['facing'] = 90     # East
             elif dy > 0:
-                self.player['facing'] = 180
+                self.player['facing'] = 180    # South
             elif dx < 0:
-                self.player['facing'] = 270
+                self.player['facing'] = 270    # West
+            
             return True
         return False
+
+    def get_player_facing_name(self):
+        facing = self.player['facing']
+        if facing == 0:
+            return 'north'
+        elif facing == 90:
+            return 'east'
+        elif facing == 180:
+            return 'south'
+        elif facing == 270:
+            return 'west'
+        return 'unknown'

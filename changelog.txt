@@ -1,6 +1,15 @@
 CheetosCo — Changelog
 =====================
 
+Version 1.0.3
+  - Rewrote audio engine with stereo sound generation.
+  - Implemented constant-power panning without DLL dependencies.
+  - Added interaural time delay (ITD) for spatial audio.
+  - Beacon now pans based on target direction relative to player facing.
+  - Improved procedural sounds: bandpass-filtered steps, descending beacon sweep.
+  - Added player facing direction to W command output.
+  - Fixed tracking direction calculation.
+
 Version 1.0.2
   - Fixed accessible_output2 import path (accessible_output2.outputs.auto.Auto).
 

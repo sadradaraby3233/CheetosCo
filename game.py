@@ -124,19 +124,30 @@ class Game:
         if not target:
             self.speech.speak('No target tracked.')
             return
+        
         d = self.map_engine.get_target_direction()
         if not d:
             return
 
         abs_angle = abs(d['relative'])
+        
         if abs_angle < 20:
             dir_str = 'straight ahead'
         elif abs_angle < 60:
-            dir_str = 'ahead and to the right' if d['relative'] > 0 else 'ahead and to the left'
+            if d['relative'] > 0:
+                dir_str = 'ahead and to the right'
+            else:
+                dir_str = 'ahead and to the left'
         elif abs_angle < 110:
-            dir_str = 'to your right' if d['relative'] > 0 else 'to your left'
+            if d['relative'] > 0:
+                dir_str = 'to your right'
+            else:
+                dir_str = 'to your left'
         elif abs_angle < 150:
-            dir_str = 'behind and to the right' if d['relative'] > 0 else 'behind and to the left'
+            if d['relative'] > 0:
+                dir_str = 'behind and to the right'
+            else:
+                dir_str = 'behind and to the left'
         else:
             dir_str = 'directly behind you'
 
@@ -150,7 +161,8 @@ class Game:
             dist_str = ', far away'
 
         name = target['props'].get('name') or target['props'].get('id') or target['type']
-        self.speech.speak(name + ', ' + dir_str + dist_str)
+        facing = self.map_engine.get_player_facing_name()
+        self.speech.speak(f'{name}, {dir_str}{dist_str}. You are facing {facing}.')
 
     def exit_game(self):
         self.speech.speak('Goodbye!')
@@ -196,12 +208,16 @@ class Game:
         while self.running:
             dt = clock.tick(60)
 
-            # Beacon timer
+            # Beacon timer with panning
             if self.state == self.STATE_WORLD and self.map_engine.get_target():
                 self.beacon_timer += dt
                 if self.beacon_timer >= self.beacon_interval:
                     self.beacon_timer = 0
-                    self.audio.play('beacon')
+                    d = self.map_engine.get_target_direction()
+                    if d:
+                        # Clamp pan to -1..1 range
+                        pan = max(-1.0, min(1.0, d['pan']))
+                        self.audio.play_panned('beacon_mono', pan)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
