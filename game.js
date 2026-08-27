@@ -105,12 +105,16 @@ const Game = (() => {
 
   function startGame() {
     SoundBank.fadeMusicAndStop(1.5);
-    SoundBank.speak('Starting game.', 1.2, () => {
-      MapEngine.load('reception').then(() => {
-        MenuSystem.close();
-        enterWorld();
-      });
-    }, true);
+    SoundBank.speak('Starting game.', 1.2);
+    MenuSystem.close();
+
+    MapEngine.load('reception').then(() => {
+      enterWorld();
+    }).catch((err) => {
+      console.error('Map load error:', err);
+      SoundBank.speak('Error loading map.', 1.2);
+      openMainMenu();
+    });
   }
 
   function enterWorld() {
@@ -119,6 +123,8 @@ const Game = (() => {
     inDialog = false;
     wasAhead = false;
     lastZoneName = null;
+
+    // Force remove ALL menu key handlers and add world handler
     document.removeEventListener('keydown', MenuSystem.handleKey);
     document.addEventListener('keydown', handleWorldKey);
 

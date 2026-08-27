@@ -1,6 +1,11 @@
 CheetosCo — Changelog
 =====================
 
+Version 2.1.1
+  - Fixed Start Game not launching: removed dependency on speech onEnd callback.
+    Menu now closes immediately and map loads via Promise with error handling.
+  - Added .catch() to map load to gracefully handle failures.
+
 Version 2.1.0
   - Added full Dialog System: dialog open sound, Enter to advance,
     arrow keys to repeat current line, game pauses during dialog.
