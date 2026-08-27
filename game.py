@@ -18,6 +18,7 @@ class Game:
         self.beacon_timer = 0
         self.beacon_interval = 700
         self.was_ahead = False
+        self.last_zone_name = None
         self.running = True
 
     def start(self):
@@ -65,11 +66,20 @@ class Game:
     def enter_world(self):
         self.state = self.STATE_WORLD
         self.was_ahead = False
+        self.last_zone_name = None
         m = self.map_engine.current_map
         if m:
             self.speech.speak('Entered ' + m['name'] + '.')
         else:
             self.speech.speak('Entered the world.')
+        # Announce initial zone
+        zone = self.map_engine.get_zone_at(
+            self.map_engine.player['x'],
+            self.map_engine.player['y'],
+            self.map_engine.player['z']
+        )
+        if zone:
+            self.last_zone_name = zone['name']
 
     def open_options(self):
         self.menu.open(
@@ -192,6 +202,17 @@ class Game:
 
         if moved:
             self.audio.play('step')
+            
+            # Auto-announce zone changes
+            zone = self.map_engine.get_zone_at(
+                self.map_engine.player['x'],
+                self.map_engine.player['y'],
+                self.map_engine.player['z']
+            )
+            if zone and zone['name'] != self.last_zone_name:
+                self.last_zone_name = zone['name']
+                self.speech.speak(zone['name'])
+            
             if self.map_engine.check_arrival():
                 target = self.map_engine.get_target()
                 if target:

@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 1.1.1
+  - Fixed NPC spawning inside the reception desk (moved desk and NPC apart).
+  - Fixed zone labels: north/south were swapped in the map file.
+  - Zone changes now auto-announce when you walk into a new zone.
+  - Initial zone is set silently on world entry to avoid double-announcement.
+
 Version 1.1.0
   - FIXED direction system: removed facing entirely. Direction is now pure dx/dy.
     Left is ALWAYS left, right is ALWAYS right. No more confusion.

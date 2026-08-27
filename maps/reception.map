@@ -6,8 +6,8 @@ maxx:20
 maxy:20
 maxz:3
 
-zone::0:0:0:20:10:100000:the south end of the hallway
-zone::0:10:0:20:20:100000:the northeast side of the hallway
+zone::0:0:0:20:10:100000:the north end of the hallway
+zone::0:10:0:20:20:100000:the south end of the hallway
 
 # Floor 0 Outer Walls
 object:wall
@@ -30,9 +30,9 @@ pos:0,19,0
 size:20,1,3
 solid:true
 
-# Reception Desk
+# Reception Desk (moved to not overlap NPC)
 object:furniture
-pos:8,5,0
+pos:5,4,0
 size:4,2,1
 type:desk
 name:the reception desk
@@ -53,9 +53,9 @@ name:the entrance doors
 solid:true
 interactive:true
 
-# NPC
+# NPC (behind the desk, not inside it)
 object:npc
-pos:9,6,0
+pos:7,7,0
 id:receptionist
 name:Cheetos Receptionist
 dialog:welcome_quest
