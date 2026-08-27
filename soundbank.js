@@ -24,13 +24,13 @@ const SoundBank = (() => {
     osc.connect(gain);
     gain.connect(c.destination);
     osc.start(t);
-    osc.stop(t + duration);
+    osc.stop(t + duration + 0.01);
   }
 
   function playNoise(duration, volume, startDelay) {
     const c = getCtx();
     const t = c.currentTime + (startDelay || 0);
-    const bufferSize = c.sampleRate * duration;
+    const bufferSize = Math.max(1, Math.floor(c.sampleRate * duration));
     const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -44,6 +44,7 @@ const SoundBank = (() => {
     src.connect(gain);
     gain.connect(c.destination);
     src.start(t);
+    src.stop(t + duration + 0.01);
   }
 
   // --- Menu navigation sounds ---
@@ -155,11 +156,102 @@ const SoundBank = (() => {
 
   // --- Speech helper ---
 
-  function speak(text, rate, onEnd) {
+  function speak(text, rate, onEnd, interrupt = true) {
+    const liveRegion = document.getElementById('tts-live');
+    if (liveRegion) {
+      liveRegion.textContent = '';
+      setTimeout(() => { liveRegion.textContent = text; }, 10);
+    }
+
+    if (typeof speechSynthesis === 'undefined' || !window.SpeechSynthesisUtterance) {
+      if (onEnd) setTimeout(onEnd, 100);
+      return;
+    }
+    
+    if (interrupt) {
+      speechSynthesis.cancel();
+    }
+
     const u = new SpeechSynthesisUtterance(text);
     u.rate = rate || 1;
     u.onend = onEnd || null;
-    speechSynthesis.speak(u);
+    u.onerror = () => { if (onEnd) onEnd(); };
+    
+    if (interrupt) {
+      setTimeout(() => speechSynthesis.speak(u), 50);
+    } else {
+      speechSynthesis.speak(u);
+    }
+  }
+
+  // --- 8-bit chiptune menu music ---
+
+  let musicInterval = null;
+
+  function startMenuMusic() {
+    if (musicInterval) return;
+    const c = getCtx();
+    const melody = [
+      659, 659, 0, 659, 0, 523, 659, 0,
+      784, 0, 0, 0, 392, 0, 0, 0,
+      523, 0, 0, 392, 0, 0, 330, 0,
+      0, 440, 0, 494, 0, 466, 440, 0,
+      392, 659, 784, 880, 0, 698, 784,
+      0, 659, 0, 523, 587, 494, 0, 0,
+      523, 0, 0, 392, 0, 0, 330, 0,
+      0, 440, 0, 494, 0, 466, 440, 0,
+      392, 659, 784, 880, 0, 698, 784,
+      0, 659, 0, 523, 587, 494, 0, 0
+    ];
+    const bass = [
+      196, 196, 196, 0, 196, 196, 196, 0,
+      196, 0, 0, 0, 196, 0, 0, 0,
+      262, 0, 0, 196, 0, 0, 165, 0,
+      0, 220, 0, 247, 0, 233, 220, 0,
+      196, 196, 196, 0, 196, 196, 196, 0,
+      196, 0, 0, 0, 196, 0, 0, 0,
+      262, 0, 0, 196, 0, 0, 165, 0,
+      0, 220, 0, 247, 0, 233, 220, 0,
+      196, 196, 196, 0, 196, 196, 196, 0,
+      196, 0, 0, 0, 196, 0, 0, 0
+    ];
+    let step = 0;
+    const bpm = 200;
+    const interval = 60 / bpm * 1000 / 2;
+
+    musicInterval = setInterval(() => {
+      const t = c.currentTime;
+      const note = melody[step % melody.length];
+      const bassNote = bass[step % bass.length];
+      if (note > 0) {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(note, t);
+        g.gain.setValueAtTime(0.08, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.connect(g); g.connect(c.destination);
+        o.start(t); o.stop(t + 0.15);
+      }
+      if (bassNote > 0) {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(bassNote, t);
+        g.gain.setValueAtTime(0.06, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        o.connect(g); g.connect(c.destination);
+        o.start(t); o.stop(t + 0.2);
+      }
+      step++;
+    }, interval);
+  }
+
+  function stopMenuMusic() {
+    if (musicInterval) {
+      clearInterval(musicInterval);
+      musicInterval = null;
+    }
   }
 
   // --- Public API ---
@@ -169,7 +261,7 @@ const SoundBank = (() => {
     playTone,
     playNoise,
     // Menu
-n    menuMove,
+    menuMove,
     menuSelect,
     menuBack,
     menuOpen,
@@ -191,6 +283,8 @@ n    menuMove,
     timerTick,
     timerAlarm,
     // Speech
-    speak
+    speak,
+    startMenuMusic,
+    stopMenuMusic
   };
 })();

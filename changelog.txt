@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.0.4
+  - Added NVDA/screen reader support via ARIA live regions.
+  - Added TTS interrupt flag to prevent speech overlap.
+  - Menu items no longer announce their position number unless Space is pressed to repeat.
+  - Fixed options menu speech queue issues.
+
 Version 0.0.3
   - Built the audio menu system with keyboard navigation (Up/Down, Enter, Escape, Space, Home/End).
 

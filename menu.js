@@ -16,8 +16,7 @@ const MenuSystem = (() => {
     }
     const item = menu.items[menu.index];
     const label = typeof item === 'string' ? item : item.label;
-    const pos = (menu.index + 1) + ' of ' + menu.items.length;
-    SoundBank.speak(label + ', ' + pos);
+    SoundBank.speak(label);
   }
 
   function navigateUp() {
@@ -64,6 +63,11 @@ const MenuSystem = (() => {
   function back() {
     const menu = current();
     if (!menu) return;
+    if (stack.length === 1) {
+      SoundBank.error();
+      SoundBank.speak('Cannot go back further.');
+      return;
+    }
     SoundBank.menuBack();
     stack.pop();
     if (menu.onBack) menu.onBack();
@@ -71,7 +75,12 @@ const MenuSystem = (() => {
   }
 
   function repeat() {
-    announce();
+    const menu = current();
+    if (!menu || menu.items.length === 0) return;
+    const item = menu.items[menu.index];
+    const label = typeof item === 'string' ? item : item.label;
+    const pos = (menu.index + 1) + ' of ' + menu.items.length;
+    SoundBank.speak(label + ', ' + pos);
   }
 
   function open(config) {
@@ -87,7 +96,7 @@ const MenuSystem = (() => {
 
   function close() {
     if (stack.length === 0) return;
-    stack.pop();
+    stack.length = 0;
     SoundBank.menuClose();
   }
 
