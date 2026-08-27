@@ -37,10 +37,12 @@ const SoundBank = (() => {
     }
   }
 
-  function makePanner(posX, posY, posZ) {
+  function makePanner(posX, posY, posZ, lightweight) {
     const c = getCtx();
     const p = c.createPanner();
-    p.panningModel = 'HRTF';
+    // Use equalpower for repeating sounds (beacon) to avoid CPU lag.
+    // Use HRTF for one-off sounds.
+    p.panningModel = lightweight ? 'equalpower' : 'HRTF';
     p.distanceModel = 'inverse';
     p.refDistance = 1;
     p.maxDistance = 100;
@@ -145,7 +147,7 @@ const SoundBank = (() => {
   function timerTick() { playTone(1000, 0.03, 'sine', 0.15); }
   function timerAlarm() { for (let i = 0; i < 4; i++) { playTone(880, 0.1, 'square', 0.2, i * 0.2); playTone(660, 0.1, 'square', 0.2, i * 0.2 + 0.1); } }
 
-  // --- Beacon: descending sweep with 3D position ---
+  // --- Beacon: descending sweep with 3D position (lightweight panner) ---
   function beaconBeep(pos3d) {
     const c = getCtx();
     const t = c.currentTime;
@@ -157,7 +159,7 @@ const SoundBank = (() => {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     if (pos3d) {
-      const pan = makePanner(pos3d.x, pos3d.y, pos3d.z);
+      const pan = makePanner(pos3d.x, pos3d.y, pos3d.z, true);
       osc.connect(gain); gain.connect(pan); pan.connect(c.destination);
     } else {
       osc.connect(gain); gain.connect(c.destination);

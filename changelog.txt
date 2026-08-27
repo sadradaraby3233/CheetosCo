@@ -1,6 +1,13 @@
 CheetosCo — Changelog
 =====================
 
+Version 2.0.1
+  - Fixed "right on top of you" false positive: thresholds lowered to 0.3
+    so direction is described even when the target is close but not on top of you.
+  - Fixed tracking lag: beacon now uses lightweight 'equalpower' panner instead
+    of HRTF to reduce CPU load during repeated beeps.
+  - HRTF is still used for one-off spatial sounds.
+
 Version 2.0.0
   - Returned to JavaScript! Full rewrite back to the web stack.
   - Restored: radio button widget, settings categories, chiptune menu music,

@@ -132,17 +132,20 @@ const MapEngine = (() => {
     const dy = tpos.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Direction from raw dx/dy
-    // dy < 0 = in front (north), dy > 0 = behind (south)
-    // dx > 0 = right (east), dx < 0 = left (west)
+    // Truly on top: both axes < 0.3
+    if (Math.abs(dx) < 0.3 && Math.abs(dy) < 0.3) {
+      return { dist: dist, dx: dx, dy: dy, dirStr: 'right on top of you' };
+    }
+
+    // Direction from raw dx/dy using small thresholds
     let aheadBehind = '';
     let leftRight = '';
 
-    if (dy < -1) aheadBehind = 'in front';
-    else if (dy > 1) aheadBehind = 'behind';
+    if (dy < -0.3) aheadBehind = 'in front';
+    else if (dy > 0.3) aheadBehind = 'behind';
 
-    if (dx > 1) leftRight = 'to the right';
-    else if (dx < -1) leftRight = 'to the left';
+    if (dx > 0.3) leftRight = 'to the right';
+    else if (dx < -0.3) leftRight = 'to the left';
 
     let dirStr;
     if (aheadBehind && leftRight) {
@@ -154,14 +157,19 @@ const MapEngine = (() => {
         dirStr = aheadBehind + ' and ' + leftRight;
       }
     } else if (aheadBehind) {
-      if (Math.abs(dx) > 0.3) {
+      if (Math.abs(dx) > 0.1) {
         const side = dx > 0 ? 'right' : 'left';
         dirStr = aheadBehind + ' and very slightly to the ' + side;
       } else {
         dirStr = 'straight ' + aheadBehind;
       }
     } else if (leftRight) {
-      dirStr = 'directly ' + leftRight;
+      if (Math.abs(dy) > 0.1) {
+        const fb = dy < 0 ? 'in front' : 'behind';
+        dirStr = leftRight + ' and very slightly ' + fb;
+      } else {
+        dirStr = 'directly ' + leftRight;
+      }
     } else {
       dirStr = 'right on top of you';
     }
