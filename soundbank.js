@@ -129,7 +129,31 @@ const SoundBank = (() => {
   }
 
   function step() {
-    playNoise(0.06, 0.08);
+    const c = getCtx();
+    const t = c.currentTime;
+    const bufferSize = Math.floor(c.sampleRate * 0.15);
+    const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 3);
+    }
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(800 + Math.random() * 200, t);
+    filter.Q.value = 1.5;
+    
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(c.destination);
+    src.start(t);
+    src.stop(t + 0.15);
   }
 
   function doorOpen() {
@@ -205,10 +229,16 @@ const SoundBank = (() => {
   // --- 8-bit chiptune menu music ---
 
   let musicInterval = null;
+  let musicGain = null;
 
   function startMenuMusic() {
     if (musicInterval) return;
     const c = getCtx();
+    
+    musicGain = c.createGain();
+    musicGain.connect(c.destination);
+    musicGain.gain.setValueAtTime(1.0, c.currentTime);
+
     const melody = [
       659, 659, 0, 659, 0, 523, 659, 0,
       784, 0, 0, 0, 392, 0, 0, 0,
@@ -248,7 +278,7 @@ const SoundBank = (() => {
         o.frequency.setValueAtTime(note, t);
         g.gain.setValueAtTime(0.08, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        o.connect(g); g.connect(c.destination);
+        o.connect(g); g.connect(musicGain);
         o.start(t); o.stop(t + 0.15);
       }
       if (bassNote > 0) {
@@ -258,7 +288,7 @@ const SoundBank = (() => {
         o.frequency.setValueAtTime(bassNote, t);
         g.gain.setValueAtTime(0.06, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-        o.connect(g); g.connect(c.destination);
+        o.connect(g); g.connect(musicGain);
         o.start(t); o.stop(t + 0.2);
       }
       step++;
@@ -270,6 +300,19 @@ const SoundBank = (() => {
       clearInterval(musicInterval);
       musicInterval = null;
     }
+    if (musicGain) {
+      musicGain.disconnect();
+      musicGain = null;
+    }
+  }
+
+  function fadeMusicAndStop(duration = 1.5) {
+    if (!musicGain || !musicInterval) return;
+    const c = getCtx();
+    musicGain.gain.cancelScheduledValues(c.currentTime);
+    musicGain.gain.setValueAtTime(musicGain.gain.value, c.currentTime);
+    musicGain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    setTimeout(stopMenuMusic, duration * 1000);
   }
 
   // --- Public API ---
@@ -305,6 +348,7 @@ const SoundBank = (() => {
     setSpeechMode,
     speak,
     startMenuMusic,
-    stopMenuMusic
+    stopMenuMusic,
+    fadeMusicAndStop
   };
 })();

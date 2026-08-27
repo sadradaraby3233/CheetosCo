@@ -66,9 +66,44 @@ const MapEngine = (() => {
     }
   }
 
-  function getCurrent() {
-    return currentMap;
+  const player = { x: 10, y: 18, z: 0, radius: 0.4 };
+
+  function getCurrent() { return currentMap; }
+  function getPlayer() { return player; }
+
+  function checkCollision(nx, ny, nz) {
+    if (!currentMap) return true;
+    if (nx < currentMap.minx || nx > currentMap.maxx || 
+        ny < currentMap.miny || ny > currentMap.maxy) return true;
+    
+    for (const obj of currentMap.objects) {
+      if (!obj.props.solid) continue;
+      if (obj.props.z !== undefined && obj.props.z !== nz) continue;
+      const pos = obj.props.pos;
+      const size = obj.props.size;
+      if (!pos || !size) continue;
+      
+      const ox = pos[0], oy = pos[1], oz = pos[2];
+      const sx = size[0], sy = size[1];
+      
+      if (nx + player.radius > ox && nx - player.radius < ox + sx &&
+          ny + player.radius > oy && ny - player.radius < oy + sy) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  return { load, getCurrent };
+  function move(dx, dy) {
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+    if (!checkCollision(nx, ny, player.z)) {
+      player.x = nx;
+      player.y = ny;
+      return true;
+    }
+    return false;
+  }
+
+  return { load, getCurrent, getPlayer, move };
 })();

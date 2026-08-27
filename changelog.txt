@@ -1,6 +1,13 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.1.0
+  - Implemented smooth exponential music fade-out for transitions.
+  - Upgraded step sounds using bandpass filters for realistic tile footsteps.
+  - Added Player entity to MapEngine with AABB collision detection.
+  - "Start Game" now loads the reception map and enters a walking mode.
+  - WASD/Arrow keys control the player in the world.
+
 Version 0.0.9
   - Upgraded Map Engine to full 3D (added minz/maxz coordinates).
   - X is Left/Right, Y is Back/Forward, Z is Up/Down (stairs/elevation).
