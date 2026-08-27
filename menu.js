@@ -15,6 +15,10 @@ const MenuSystem = (() => {
       return;
     }
     const item = menu.items[menu.index];
+    if (item && item.type === 'radio') {
+      SoundBank.speak(item.label + ': ' + item.currentValue, 1.2);
+      return;
+    }
     const label = typeof item === 'string' ? item : item.label;
     SoundBank.speak(label, 1.2);
   }
@@ -51,6 +55,34 @@ const MenuSystem = (() => {
     announce();
   }
 
+  function navigateLeft() {
+    const menu = current();
+    if (!menu || menu.items.length === 0) return;
+    const item = menu.items[menu.index];
+    if (item && item.type === 'radio') {
+      const idx = item.options.indexOf(item.currentValue);
+      const newIdx = (idx - 1 + item.options.length) % item.options.length;
+      item.currentValue = item.options[newIdx];
+      SoundBank.menuMove();
+      if (item.onChange) item.onChange(item.currentValue);
+      SoundBank.speak(item.currentValue, 1.2);
+    }
+  }
+
+  function navigateRight() {
+    const menu = current();
+    if (!menu || menu.items.length === 0) return;
+    const item = menu.items[menu.index];
+    if (item && item.type === 'radio') {
+      const idx = item.options.indexOf(item.currentValue);
+      const newIdx = (idx + 1) % item.options.length;
+      item.currentValue = item.options[newIdx];
+      SoundBank.menuMove();
+      if (item.onChange) item.onChange(item.currentValue);
+      SoundBank.speak(item.currentValue, 1.2);
+    }
+  }
+
   function select() {
     const menu = current();
     if (!menu || menu.items.length === 0) return;
@@ -78,8 +110,12 @@ const MenuSystem = (() => {
     const menu = current();
     if (!menu || menu.items.length === 0) return;
     const item = menu.items[menu.index];
-    const label = typeof item === 'string' ? item : item.label;
     const pos = (menu.index + 1) + ' of ' + menu.items.length;
+    if (item && item.type === 'radio') {
+      SoundBank.speak(item.label + ': ' + item.currentValue + ', ' + pos + '. Use left and right to change.', 1.2);
+      return;
+    }
+    const label = typeof item === 'string' ? item : item.label;
     SoundBank.speak(label + ', ' + pos, 1.2);
   }
 
@@ -133,6 +169,14 @@ const MenuSystem = (() => {
         e.preventDefault();
         goToBottom();
         return true;
+      case 'ArrowLeft':
+        e.preventDefault();
+        navigateLeft();
+        return true;
+      case 'ArrowRight':
+        e.preventDefault();
+        navigateRight();
+        return true;
       case 'Enter':
         e.preventDefault();
         select();
@@ -151,6 +195,45 @@ const MenuSystem = (() => {
   }
 
   document.addEventListener('keydown', handleKey);
+
+  // --- 2-finger touch swipe for Android radio buttons ---
+  let twoFingerStartX = 0;
+  let twoFingerLastX = 0;
+  let isTwoFingerActive = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      isTwoFingerActive = true;
+      twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      twoFingerLastX = twoFingerStartX;
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchmove', (e) => {
+    if (isTwoFingerActive && e.touches.length === 2) {
+      twoFingerLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      e.preventDefault(); // Prevent Android back swipe gesture
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', (e) => {
+    if (isTwoFingerActive) {
+      const deltaX = twoFingerLastX - twoFingerStartX;
+      const threshold = 50;
+      
+      if (Math.abs(deltaX) > threshold) {
+        if (deltaX > 0) {
+          navigateRight();
+        } else {
+          navigateLeft();
+        }
+      }
+      
+      if (e.touches.length < 2) {
+        isTwoFingerActive = false;
+      }
+    }
+  }, { passive: false });
 
   return {
     open,

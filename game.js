@@ -42,14 +42,19 @@ const Game = (() => {
 
   function openOptions() {
     SoundBank.stopMenuMusic();
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const items = ['General', 'Sound'];
+    if (!isAndroid) items.push('Speech');
+    items.push('Menu', 'Back');
+  
     MenuSystem.open({
-      items: ['General', 'Sound', 'Speech', 'Menu', 'Back'],
+      items: items,
       onSelect: (index, item) => {
-        if (index === 4) {
+        const label = typeof item === 'string' ? item : item.label;
+        if (label === 'Back') {
           MenuSystem.back();
           return;
         }
-        const label = typeof item === 'string' ? item : item.label;
         SoundBank.speak(label + ' options.', 1.2, () => {
           if (label === 'Speech') {
             openSpeechOptions();
@@ -68,53 +73,31 @@ const Game = (() => {
     });
   }
 
-  function openSpeechOptions() {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const currentMode = SoundBank.getSpeechMode();
-  
-    const options = [];
-    if (!isAndroid) {
-      options.push({ label: 'Screen Reader', value: 'sr' });
-      options.push({ label: 'Browser TTS', value: 'tts' });
-    }
-  
-    const items = options.map(o => ({
-      label: o.label + (o.value === currentMode ? ' (On)' : ' (Off)'),
-      value: o.value
-    }));
-    items.push('Back');
-  
-    MenuSystem.open({
-      items: items,
-      onSelect: (index, item) => {
-        if (index === items.length - 1) {
-          MenuSystem.back();
-          return;
-        }
-        if (item.value) {
-          SoundBank.setSpeechMode(item.value);
-          const newLabel = item.label.replace(/ \((On|Off)\)/, '');
-          SoundBank.speak('Speech mode set to ' + newLabel, 1.2, () => {
-            const isAndroid = /Android/i.test(navigator.userAgent);
-            const currentMode = SoundBank.getSpeechMode();
-            const options = [];
-            if (!isAndroid) {
-              options.push({ label: 'Screen Reader', value: 'sr' });
-              options.push({ label: 'Browser TTS', value: 'tts' });
-            }
-            const newItems = options.map(o => ({
-              label: o.label + (o.value === currentMode ? ' (On)' : ' (Off)'),
-              value: o.value
-            }));
-            newItems.push('Back');
-            MenuSystem.replaceItems(newItems);
-            MenuSystem.announce();
-          }, false);
-        }
-      },
-      onBack: () => {}
-    });
-  }
+      function openSpeechOptions() {
+        const options = ['Screen Reader', 'Browser TTS'];
+        const values = ['sr', 'tts'];
+        const currentMode = SoundBank.getSpeechMode();
+        const currentIdx = values.indexOf(currentMode);
+
+        const radioItem = {
+          type: 'radio',
+          label: 'Speech',
+          options: options,
+          currentValue: options[currentIdx],
+          onChange: (newValue) => {
+            const newVal = values[options.indexOf(newValue)];
+            SoundBank.setSpeechMode(newVal);
+          }
+        };
+
+        MenuSystem.open({
+          items: [radioItem, 'Back'],
+          onSelect: (index) => {
+            if (index === 1) MenuSystem.back();
+          },
+          onBack: () => {}
+        });
+      }
   
   function exitGame() {
     SoundBank.stopMenuMusic();

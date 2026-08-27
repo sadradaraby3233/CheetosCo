@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.0.6
+  - Added radio button widget for settings with Left/Right arrow key support.
+  - Added 2-finger swipe support for Android to change radio options without triggering back gestures.
+  - Hidden Speech settings from the main Options menu on Android.
+  - Refactored Speech menu to use the new radio button widget.
+
 Version 0.0.5
   - Added Speech settings menu to choose between Screen Reader and Browser TTS.
   - Hidden Screen Reader option on Android (since TalkBack must be disabled to play).
