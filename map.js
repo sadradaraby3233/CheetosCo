@@ -129,34 +129,33 @@ object:npc\npos:9,6,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcom
     if (!trackedTarget) return null;
     const pos = trackedTarget.props.pos;
     if (!pos) return null;
-    const size = trackedTarget.props.size || [0,0,0];
+    const size = trackedTarget.props.size || [0, 0, 0];
     return {
-      x: pos[0] + size[0]/2,
-      y: pos[1] + size[1]/2,
-      z: pos[2] + size[2]/2
+      x: pos[0] + size[0] / 2,
+      y: pos[1] + size[1] / 2,
+      z: pos[2] + size[2] / 2
     };
   }
 
   function getTargetDirection() {
     const tPos = getTargetPosition();
     if (!tPos) return null;
-    
+
     const dx = tPos.x - player.x;
     const dy = tPos.y - player.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    
-    // Calculate angle to target (0 = north, 90 = east, 180 = south, 270 = west)
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Angle in degrees: 0=N, 90=E, 180=S, 270=W
+    // atan2(x, -y) gives angle from north axis, clockwise
     let angleToTarget = Math.atan2(dx, -dy) * 180 / Math.PI;
     if (angleToTarget < 0) angleToTarget += 360;
-    
-    // Calculate relative angle from player's facing
-    let relativeAngle = angleToTarget - player.facing;
-    
-    // Normalize to -180 to 180
-    while (relativeAngle > 180) relativeAngle -= 360;
-    while (relativeAngle < -180) relativeAngle += 360;
-    
-    return { dist, relativeAngle };
+
+    // Relative angle from player's facing direction
+    let relative = angleToTarget - player.facing;
+    while (relative > 180) relative -= 360;
+    while (relative < -180) relative += 360;
+
+    return { dist: dist, relative: relative, angle: angleToTarget };
   }
 
   function checkArrival() {
@@ -191,11 +190,11 @@ object:npc\npos:9,6,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcom
     if (!checkCollision(nx, ny, player.z)) {
       player.x = nx;
       player.y = ny;
-      if (dy < 0) player.facing = 0;      // North
-      else if (dx > 0) player.facing = 90; // East
-      else if (dy > 0) player.facing = 180;// South
-      else if (dx < 0) player.facing = 270;// West
-      
+      if (dy < 0) player.facing = 0;
+      else if (dx > 0) player.facing = 90;
+      else if (dy > 0) player.facing = 180;
+      else if (dx < 0) player.facing = 270;
+
       SoundBank.updateListener(player.x, player.y, player.z, player.facing);
       return true;
     }

@@ -1,6 +1,13 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.3.1
+  - Rewrote HRTF 3D audio with correct coordinate mapping (game X/Y/Z to audio X/Z/Y).
+  - Fixed beaconBeep to actually produce sound when position is valid.
+  - Fixed direction calculation using proper atan2 with north-axis reference.
+  - Simplified and stabilized tracking menu state transitions.
+  - Added legacy Web Audio API fallback for older browsers.
+
 Version 0.3.0
   - Implemented HRTF-based 3D audio system using Web Audio API PannerNode.
   - Beacon beeps now use true 3D spatialization - you can hear the direction the sound is coming from.

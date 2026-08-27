@@ -31,10 +31,10 @@ const Game = (() => {
           case 3: exitGame(); break;
         }
       },
-      onBack: () => {}
+      onBack: () => { }
     });
   }
-  
+
   function startGame() {
     SoundBank.fadeMusicAndStop(1.5);
     SoundBank.speak('Starting game.', 1.2, () => {
@@ -44,16 +44,16 @@ const Game = (() => {
       });
     }, true);
   }
-  
+
   function enterWorld() {
     worldActive = true;
     inTrackingMenu = false;
     document.removeEventListener('keydown', MenuSystem.handleKey);
     document.addEventListener('keydown', handleWorldKey);
-    
+
     const player = MapEngine.getPlayer();
     SoundBank.updateListener(player.x, player.y, player.z, player.facing);
-    
+
     const map = MapEngine.getCurrent();
     if (map) {
       SoundBank.speak('Entered ' + map.name + '.', 1.2);
@@ -80,12 +80,12 @@ const Game = (() => {
         SoundBank.speak('Nothing to track.');
         return;
       }
-      
+
       inTrackingMenu = true;
       worldActive = false;
       document.removeEventListener('keydown', handleWorldKey);
       document.addEventListener('keydown', MenuSystem.handleKey);
-      
+
       const items = objs.map(o => o.name);
       items.push('Cancel');
       MenuSystem.open({
@@ -132,28 +132,28 @@ const Game = (() => {
     }
     const dir = MapEngine.getTargetDirection();
     if (!dir) return;
-    
+
     let dirStr = '';
-    const absAngle = Math.abs(dir.relativeAngle);
-    
+    const absAngle = Math.abs(dir.relative);
+
     if (absAngle < 20) {
       dirStr = 'straight ahead';
     } else if (absAngle < 60) {
-      dirStr = dir.relativeAngle > 0 ? 'ahead and to the right' : 'ahead and to the left';
+      dirStr = dir.relative > 0 ? 'ahead and to the right' : 'ahead and to the left';
     } else if (absAngle < 110) {
-      dirStr = dir.relativeAngle > 0 ? 'to your right' : 'to your left';
+      dirStr = dir.relative > 0 ? 'to your right' : 'to your left';
     } else if (absAngle < 150) {
-      dirStr = dir.relativeAngle > 0 ? 'behind and to the right' : 'behind and to the left';
+      dirStr = dir.relative > 0 ? 'behind and to the right' : 'behind and to the left';
     } else {
       dirStr = 'directly behind you';
     }
-    
+
     let distStr = '';
     if (dir.dist < 2) distStr = ', very close';
     else if (dir.dist < 5) distStr = ', nearby';
     else if (dir.dist < 10) distStr = ', a short walk away';
     else distStr = ', far away';
-    
+
     const name = target.props.name || target.props.id || target.type;
     SoundBank.speak(name + ', ' + dirStr + distStr, 1.2);
   }
@@ -162,7 +162,7 @@ const Game = (() => {
     if (!worldActive || inTrackingMenu) return;
     e.preventDefault();
     let moved = false;
-    
+
     if (e.key === 'ArrowUp') moved = MapEngine.move(0, -0.5);
     else if (e.key === 'ArrowDown') moved = MapEngine.move(0, 0.5);
     else if (e.key === 'ArrowLeft') moved = MapEngine.move(-0.5, 0);
@@ -180,7 +180,7 @@ const Game = (() => {
       openMainMenu();
       return;
     }
-    
+
     if (moved) {
       SoundBank.step();
       if (MapEngine.checkArrival()) {
@@ -222,7 +222,7 @@ const Game = (() => {
             MenuSystem.open({
               items: ['Back'],
               onSelect: () => MenuSystem.back(),
-              onBack: () => {}
+              onBack: () => { }
             });
           }
         }, false);
@@ -255,7 +255,7 @@ const Game = (() => {
       onSelect: (index) => {
         if (index === 1) MenuSystem.back();
       },
-      onBack: () => {}
+      onBack: () => { }
     });
   }
 

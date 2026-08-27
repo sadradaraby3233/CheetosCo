@@ -1,5 +1,4 @@
 // CheetosCo — Procedural Sound Bank (DSP)
-// Every sound in the game is generated here. No audio files.
 
 const SoundBank = (() => {
   let ctx = null;
@@ -8,58 +7,63 @@ const SoundBank = (() => {
   function getCtx() {
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume();
       listenerNode = ctx.listener;
     }
+    if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
 
   // --- 3D Audio System ---
-  let audioListener = { x: 0, y: 0, z: 0, facing: 0 };
-  
+  // Game coords: x = left/right, y = back(+)/forward(-), z = height
+  // Audio coords: x = left/right, y = height, z = back(+)/forward(-)
+  // So: audio.x = game.x, audio.y = game.z, audio.z = game.y
+
   function updateListener(x, y, z, facing) {
-    audioListener.x = x;
-    audioListener.y = y;
-    audioListener.z = z;
-    audioListener.facing = facing;
-    
-    if (listenerNode) {
-      // Convert facing angle to forward vector (facing 0 = north = -y in Web Audio)
-      const rad = (facing - 90) * Math.PI / 180;
-      const forwardX = Math.cos(rad);
-      const forwardZ = -Math.sin(rad);
-      
-      if (listenerNode.positionX) {
-        listenerNode.positionX.setValueAtTime(x, ctx.currentTime);
-        listenerNode.positionY.setValueAtTime(z, ctx.currentTime);
-        listenerNode.positionZ.setValueAtTime(-y, ctx.currentTime);
-        listenerNode.forwardX.setValueAtTime(forwardX, ctx.currentTime);
-        listenerNode.forwardY.setValueAtTime(0, ctx.currentTime);
-        listenerNode.forwardZ.setValueAtTime(forwardZ, ctx.currentTime);
-        listenerNode.upX.setValueAtTime(0, ctx.currentTime);
-        listenerNode.upY.setValueAtTime(1, ctx.currentTime);
-        listenerNode.upZ.setValueAtTime(0, ctx.currentTime);
-      }
+    const c = getCtx();
+    if (!c.listener) return;
+
+    const rad = facing * Math.PI / 180;
+    const fwdX = Math.sin(rad);
+    const fwdZ = Math.cos(rad);
+
+    if (c.listener.positionX) {
+      c.listener.positionX.setValueAtTime(x, c.currentTime);
+      c.listener.positionY.setValueAtTime(z, c.currentTime);
+      c.listener.positionZ.setValueAtTime(y, c.currentTime);
+      c.listener.forwardX.setValueAtTime(fwdX, c.currentTime);
+      c.listener.forwardY.setValueAtTime(0, c.currentTime);
+      c.listener.forwardZ.setValueAtTime(fwdZ, c.currentTime);
+      c.listener.upX.setValueAtTime(0, c.currentTime);
+      c.listener.upY.setValueAtTime(1, c.currentTime);
+      c.listener.upZ.setValueAtTime(0, c.currentTime);
+    } else if (c.listener.setPosition) {
+      c.listener.setPosition(x, z, y);
+      c.listener.setOrientation(fwdX, 0, fwdZ, 0, 1, 0);
     }
   }
 
-  function createPanner() {
+  function makePanner(posX, posY, posZ) {
     const c = getCtx();
-    const panner = c.createPanner();
-    panner.panningModel = 'HRTF';
-    panner.distanceModel = 'inverse';
-    panner.refDistance = 1;
-    panner.maxDistance = 100;
-    panner.rolloffFactor = 1;
-    panner.coneInnerAngle = 360;
-    panner.coneOuterAngle = 0;
-    panner.coneOuterGain = 0;
-    return panner;
+    const p = c.createPanner();
+    p.panningModel = 'HRTF';
+    p.distanceModel = 'linear';
+    p.refDistance = 1;
+    p.maxDistance = 50;
+    p.rolloffFactor = 0.5;
+
+    if (p.positionX) {
+      p.positionX.setValueAtTime(posX, c.currentTime);
+      p.positionY.setValueAtTime(posZ, c.currentTime);
+      p.positionZ.setValueAtTime(posY, c.currentTime);
+    } else if (p.setPosition) {
+      p.setPosition(posX, posZ, posY);
+    }
+    return p;
   }
 
   // --- Core helpers ---
 
-  function playTone(freq, duration, type, volume, startDelay, position) {
+  function playTone(freq, duration, type, volume, startDelay, pos3d) {
     const c = getCtx();
     const t = c.currentTime + (startDelay || 0);
     const osc = c.createOscillator();
@@ -68,27 +72,22 @@ const SoundBank = (() => {
     osc.frequency.setValueAtTime(freq, t);
     gain.gain.setValueAtTime(volume || 0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-    
-    if (position) {
-      const panner = createPanner();
-      if (panner.positionX) {
-        panner.positionX.setValueAtTime(position.x, t);
-        panner.positionY.setValueAtTime(position.z, t);
-        panner.positionZ.setValueAtTime(-position.y, t);
-      }
+
+    if (pos3d) {
+      const pan = makePanner(pos3d.x, pos3d.y, pos3d.z);
       osc.connect(gain);
-      gain.connect(panner);
-      panner.connect(c.destination);
+      gain.connect(pan);
+      pan.connect(c.destination);
     } else {
       osc.connect(gain);
       gain.connect(c.destination);
     }
-    
+
     osc.start(t);
     osc.stop(t + duration + 0.01);
   }
 
-  function playNoise(duration, volume, startDelay, position) {
+  function playNoise(duration, volume, startDelay, pos3d) {
     const c = getCtx();
     const t = c.currentTime + (startDelay || 0);
     const bufferSize = Math.max(1, Math.floor(c.sampleRate * duration));
@@ -102,106 +101,43 @@ const SoundBank = (() => {
     const gain = c.createGain();
     gain.gain.setValueAtTime(volume || 0.1, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-    
-    if (position) {
-      const panner = createPanner();
-      if (panner.positionX) {
-        panner.positionX.setValueAtTime(position.x, t);
-        panner.positionY.setValueAtTime(position.z, t);
-        panner.positionZ.setValueAtTime(-position.y, t);
-      }
+
+    if (pos3d) {
+      const pan = makePanner(pos3d.x, pos3d.y, pos3d.z);
       src.connect(gain);
-      gain.connect(panner);
-      panner.connect(c.destination);
+      gain.connect(pan);
+      pan.connect(c.destination);
     } else {
       src.connect(gain);
       gain.connect(c.destination);
     }
-    
+
     src.start(t);
     src.stop(t + duration + 0.01);
   }
 
   // --- Menu navigation sounds ---
 
-  function menuMove() {
-    playTone(600, 0.08, 'sine', 0.2);
-  }
-
-  function menuSelect() {
-    playTone(800, 0.06, 'sine', 0.25);
-    playTone(1200, 0.1, 'sine', 0.2, 0.06);
-  }
-
-  function menuBack() {
-    playTone(500, 0.08, 'sine', 0.2);
-    playTone(350, 0.12, 'sine', 0.15, 0.06);
-  }
-
-  function menuOpen() {
-    playTone(400, 0.1, 'sine', 0.2);
-    playTone(600, 0.1, 'sine', 0.2, 0.08);
-    playTone(800, 0.15, 'sine', 0.2, 0.16);
-  }
-
-  function menuClose() {
-    playTone(800, 0.1, 'sine', 0.2);
-    playTone(600, 0.1, 'sine', 0.2, 0.08);
-    playTone(400, 0.15, 'sine', 0.15, 0.16);
-  }
+  function menuMove() { playTone(600, 0.08, 'sine', 0.2); }
+  function menuSelect() { playTone(800, 0.06, 'sine', 0.25); playTone(1200, 0.1, 'sine', 0.2, 0.06); }
+  function menuBack() { playTone(500, 0.08, 'sine', 0.2); playTone(350, 0.12, 'sine', 0.15, 0.06); }
+  function menuOpen() { playTone(400, 0.1, 'sine', 0.2); playTone(600, 0.1, 'sine', 0.2, 0.08); playTone(800, 0.15, 'sine', 0.2, 0.16); }
+  function menuClose() { playTone(800, 0.1, 'sine', 0.2); playTone(600, 0.1, 'sine', 0.2, 0.08); playTone(400, 0.15, 'sine', 0.15, 0.16); }
 
   // --- UI feedback sounds ---
 
-  function click() {
-    playTone(1000, 0.04, 'square', 0.15);
-  }
-
-  function confirm() {
-    playTone(523, 0.1, 'sine', 0.2);
-    playTone(659, 0.1, 'sine', 0.2, 0.1);
-    playTone(784, 0.15, 'sine', 0.25, 0.2);
-  }
-
-  function error() {
-    playTone(200, 0.15, 'sawtooth', 0.2);
-    playTone(150, 0.2, 'sawtooth', 0.15, 0.12);
-  }
-
-  function warning() {
-    playTone(440, 0.12, 'triangle', 0.2);
-    playTone(440, 0.12, 'triangle', 0.2, 0.2);
-  }
-
-  function success() {
-    playTone(523, 0.08, 'sine', 0.2);
-    playTone(659, 0.08, 'sine', 0.2, 0.08);
-    playTone(784, 0.08, 'sine', 0.2, 0.16);
-    playTone(1047, 0.2, 'sine', 0.3, 0.24);
-  }
-
-  function fail() {
-    playTone(400, 0.12, 'sawtooth', 0.2);
-    playTone(300, 0.12, 'sawtooth', 0.18, 0.1);
-    playTone(200, 0.25, 'sawtooth', 0.15, 0.2);
-  }
+  function click() { playTone(1000, 0.04, 'square', 0.15); }
+  function confirm() { playTone(523, 0.1, 'sine', 0.2); playTone(659, 0.1, 'sine', 0.2, 0.1); playTone(784, 0.15, 'sine', 0.25, 0.2); }
+  function error() { playTone(200, 0.15, 'sawtooth', 0.2); playTone(150, 0.2, 'sawtooth', 0.15, 0.12); }
+  function warning() { playTone(440, 0.12, 'triangle', 0.2); playTone(440, 0.12, 'triangle', 0.2, 0.2); }
+  function success() { playTone(523, 0.08, 'sine', 0.2); playTone(659, 0.08, 'sine', 0.2, 0.08); playTone(784, 0.08, 'sine', 0.2, 0.16); playTone(1047, 0.2, 'sine', 0.3, 0.24); }
+  function fail() { playTone(400, 0.12, 'sawtooth', 0.2); playTone(300, 0.12, 'sawtooth', 0.18, 0.1); playTone(200, 0.25, 'sawtooth', 0.15, 0.2); }
 
   // --- Game sounds ---
 
-  function ambient() {
-    playNoise(3, 0.03);
-    playTone(80, 3, 'sine', 0.05);
-  }
-
-  function pickup() {
-    playTone(800, 0.05, 'sine', 0.2);
-    playTone(1200, 0.08, 'sine', 0.25, 0.04);
-    playTone(1600, 0.1, 'sine', 0.2, 0.1);
-  }
-
-  function drop() {
-    playTone(600, 0.06, 'sine', 0.2);
-    playTone(400, 0.1, 'sine', 0.15, 0.05);
-  }
+  function ambient() { playNoise(3, 0.03); playTone(80, 3, 'sine', 0.05); }
+  function pickup() { playTone(800, 0.05, 'sine', 0.2); playTone(1200, 0.08, 'sine', 0.25, 0.04); playTone(1600, 0.1, 'sine', 0.2, 0.1); }
+  function drop() { playTone(600, 0.06, 'sine', 0.2); playTone(400, 0.1, 'sine', 0.15, 0.05); }
 
   function step() {
     const c = getCtx();
@@ -214,16 +150,16 @@ const SoundBank = (() => {
     }
     const src = c.createBufferSource();
     src.buffer = buffer;
-    
+
     const filter = c.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(800 + Math.random() * 200, t);
     filter.Q.value = 1.5;
-    
+
     const gain = c.createGain();
     gain.gain.setValueAtTime(0.4, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-    
+
     src.connect(filter);
     filter.connect(gain);
     gain.connect(c.destination);
@@ -231,29 +167,12 @@ const SoundBank = (() => {
     src.stop(t + 0.15);
   }
 
-  function doorOpen() {
-    playTone(200, 0.3, 'sine', 0.1);
-    playTone(300, 0.3, 'sine', 0.08, 0.15);
-    playNoise(0.2, 0.05, 0.1);
-  }
+  function doorOpen() { playTone(200, 0.3, 'sine', 0.1); playTone(300, 0.3, 'sine', 0.08, 0.15); playNoise(0.2, 0.05, 0.1); }
+  function doorClose() { playNoise(0.15, 0.12); playTone(150, 0.2, 'sine', 0.1, 0.05); }
+  function timerTick() { playTone(1000, 0.03, 'sine', 0.15); }
+  function timerAlarm() { for (let i = 0; i < 4; i++) { playTone(880, 0.1, 'square', 0.2, i * 0.2); playTone(660, 0.1, 'square', 0.2, i * 0.2 + 0.1); } }
 
-  function doorClose() {
-    playNoise(0.15, 0.12);
-    playTone(150, 0.2, 'sine', 0.1, 0.05);
-  }
-
-  function timerTick() {
-    playTone(1000, 0.03, 'sine', 0.15);
-  }
-
-  function timerAlarm() {
-    for (let i = 0; i < 4; i++) {
-      playTone(880, 0.1, 'square', 0.2, i * 0.2);
-      playTone(660, 0.1, 'square', 0.2, i * 0.2 + 0.1);
-    }
-  }
-
-  function beaconBeep(position) {
+  function beaconBeep(pos3d) {
     const c = getCtx();
     const t = c.currentTime;
     const osc = c.createOscillator();
@@ -261,39 +180,34 @@ const SoundBank = (() => {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(1200, t);
     osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
-    gain.gain.setValueAtTime(0.25, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-    
-    if (position) {
-      const panner = createPanner();
-      if (panner.positionX) {
-        panner.positionX.setValueAtTime(position.x, t);
-        panner.positionY.setValueAtTime(position.z, t);
-        panner.positionZ.setValueAtTime(-position.y, t);
-      }
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+    if (pos3d) {
+      const pan = makePanner(pos3d.x, pos3d.y, pos3d.z);
       osc.connect(gain);
-      gain.connect(panner);
-      panner.connect(c.destination);
+      gain.connect(pan);
+      pan.connect(c.destination);
     } else {
       osc.connect(gain);
       gain.connect(c.destination);
     }
-    
+
     osc.start(t);
-    osc.stop(t + 0.12);
+    osc.stop(t + 0.15);
   }
 
   // --- Speech helper ---
 
   let speechMode = localStorage.getItem('cheetos_speech_mode') || 'sr';
-
   function getSpeechMode() { return speechMode; }
   function setSpeechMode(mode) {
     speechMode = mode;
     localStorage.setItem('cheetos_speech_mode', mode);
   }
 
-  function speak(text, rate, onEnd, interrupt = true) {
+  function speak(text, rate, onEnd, interrupt) {
+    if (typeof interrupt === 'undefined') interrupt = true;
     const mode = speechMode;
     const liveRegion = document.getElementById('tts-live');
 
@@ -312,7 +226,7 @@ const SoundBank = (() => {
       if (onEnd) setTimeout(onEnd, 100);
       return;
     }
-    
+
     if (interrupt) {
       speechSynthesis.cancel();
       setTimeout(() => {
@@ -339,7 +253,7 @@ const SoundBank = (() => {
   function startMenuMusic() {
     if (musicInterval) return;
     const c = getCtx();
-    
+
     musicGain = c.createGain();
     musicGain.connect(c.destination);
     musicGain.gain.setValueAtTime(1.0, c.currentTime);
@@ -401,17 +315,12 @@ const SoundBank = (() => {
   }
 
   function stopMenuMusic() {
-    if (musicInterval) {
-      clearInterval(musicInterval);
-      musicInterval = null;
-    }
-    if (musicGain) {
-      musicGain.disconnect();
-      musicGain = null;
-    }
+    if (musicInterval) { clearInterval(musicInterval); musicInterval = null; }
+    if (musicGain) { musicGain.disconnect(); musicGain = null; }
   }
 
-  function fadeMusicAndStop(duration = 1.5) {
+  function fadeMusicAndStop(duration) {
+    if (typeof duration === 'undefined') duration = 1.5;
     if (!musicGain || !musicInterval) return;
     const c = getCtx();
     musicGain.gain.cancelScheduledValues(c.currentTime);
@@ -420,42 +329,16 @@ const SoundBank = (() => {
     setTimeout(stopMenuMusic, duration * 1000);
   }
 
-  // --- Public API ---
-
   return {
     getCtx,
     playTone,
     playNoise,
-    // Menu
-    menuMove,
-    menuSelect,
-    menuBack,
-    menuOpen,
-    menuClose,
-    // UI
-    click,
-    confirm,
-    error,
-    warning,
-    success,
-    fail,
-    // Game
-    ambient,
-    pickup,
-    drop,
-    step,
-    beaconBeep,
-    doorOpen,
-    doorClose,
-    timerTick,
-    timerAlarm,
-    // Speech
-    getSpeechMode,
-    setSpeechMode,
-    speak,
-    startMenuMusic,
-    stopMenuMusic,
-    fadeMusicAndStop,
+    menuMove, menuSelect, menuBack, menuOpen, menuClose,
+    click, confirm, error, warning, success, fail,
+    ambient, pickup, drop, step, beaconBeep,
+    doorOpen, doorClose, timerTick, timerAlarm,
+    getSpeechMode, setSpeechMode, speak,
+    startMenuMusic, stopMenuMusic, fadeMusicAndStop,
     updateListener
   };
 })();
