@@ -1,8 +1,8 @@
-import accessible_output2
+import accessible_output2.outputs.auto as auto
 
 class Speech:
     def __init__(self):
-        self.output = accessible_output2.auto.Auto()
+        self.output = auto.Auto()
 
     def speak(self, text, interrupt=True):
-        self.output.speak(text, interrupt)
+        self.output.speak(text, interrupt=interrupt)
