@@ -1,14 +1,20 @@
 CheetosCo — Changelog
 =====================
 
+Version 1.1.0
+  - FIXED direction system: removed facing entirely. Direction is now pure dx/dy.
+    Left is ALWAYS left, right is ALWAYS right. No more confusion.
+  - Added radar lock-on sound: when a tracked target is straight in front,
+    a rising chirp plays to signal you are aligned.
+  - Better direction descriptions: "in front and slightly to the left",
+    "directly to your right", etc.
+  - Beacon panning now uses simple angle/90 mapping. Correct left/right.
+  - Rewrote audio with proper sweep generation for beacon and lockon.
+
 Version 1.0.3
   - Rewrote audio engine with stereo sound generation.
   - Implemented constant-power panning without DLL dependencies.
   - Added interaural time delay (ITD) for spatial audio.
-  - Beacon now pans based on target direction relative to player facing.
-  - Improved procedural sounds: bandpass-filtered steps, descending beacon sweep.
-  - Added player facing direction to W command output.
-  - Fixed tracking direction calculation.
 
 Version 1.0.2
   - Fixed accessible_output2 import path (accessible_output2.outputs.auto.Auto).

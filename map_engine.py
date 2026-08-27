@@ -5,7 +5,7 @@ class MapEngine:
     def __init__(self, speech):
         self.speech = speech
         self.current_map = None
-        self.player = {'x': 10, 'y': 18, 'z': 0, 'radius': 0.4, 'facing': 0}
+        self.player = {'x': 10, 'y': 18, 'z': 0, 'radius': 0.4}
         self.tracked_target = None
 
     def load(self, map_name):
@@ -123,36 +123,44 @@ class MapEngine:
         }
 
     def get_target_direction(self):
-        """Calculate direction to target relative to player facing."""
+        """Simple direction: no facing, just raw dx/dy relative to player.
+        -y = in front (north), +y = behind (south)
+        -x = left (west), +x = right (east)
+        """
         tpos = self.get_target_position()
         if not tpos:
             return None
-        
+
         dx = tpos['x'] - self.player['x']
         dy = tpos['y'] - self.player['y']
         dist = math.sqrt(dx * dx + dy * dy)
-        
-        # Calculate absolute angle to target (0=N, 90=E, 180=S, 270=W)
-        # atan2(dx, -dy) gives angle from north, clockwise positive
-        angle_to_target = math.degrees(math.atan2(dx, -dy))
-        if angle_to_target < 0:
-            angle_to_target += 360
-        
-        # Calculate relative angle from player's facing direction
-        relative = angle_to_target - self.player['facing']
-        
-        # Normalize to -180..180
-        while relative > 180:
-            relative -= 360
-        while relative < -180:
-            relative += 360
-        
+
+        # Angle: 0 = straight ahead (north/-y), clockwise positive
+        # atan2(dx, -dy) gives 0 when target is directly ahead
+        angle = math.degrees(math.atan2(dx, -dy))
+        # angle is now -180..180 where:
+        #   0 = straight ahead
+        #   90 = directly right
+        #   -90 = directly left
+        #   180/-180 = directly behind
+
+        # Pan: -1 = full left, 0 = center, 1 = full right
+        pan = max(-1.0, min(1.0, angle / 90.0))
+
         return {
             'dist': dist,
-            'relative': relative,
-            'absolute': angle_to_target,
-            'pan': relative / 90.0  # Convert to -2..2 range for panning
+            'angle': angle,
+            'pan': pan,
+            'dx': dx,
+            'dy': dy
         }
+
+    def is_target_ahead(self):
+        """Returns True if target is roughly straight ahead (within 15 degrees)."""
+        d = self.get_target_direction()
+        if not d:
+            return False
+        return abs(d['angle']) < 15
 
     def check_arrival(self):
         if not self.tracked_target:
@@ -188,28 +196,5 @@ class MapEngine:
         if not self.check_collision(nx, ny, self.player['z']):
             self.player['x'] = nx
             self.player['y'] = ny
-            
-            # Update facing based on movement direction
-            if dy < 0:
-                self.player['facing'] = 0      # North
-            elif dx > 0:
-                self.player['facing'] = 90     # East
-            elif dy > 0:
-                self.player['facing'] = 180    # South
-            elif dx < 0:
-                self.player['facing'] = 270    # West
-            
             return True
         return False
-
-    def get_player_facing_name(self):
-        facing = self.player['facing']
-        if facing == 0:
-            return 'north'
-        elif facing == 90:
-            return 'east'
-        elif facing == 180:
-            return 'south'
-        elif facing == 270:
-            return 'west'
-        return 'unknown'
