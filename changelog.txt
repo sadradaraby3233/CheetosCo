@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.0.7
+  - Added inactivity hint for radio buttons ("Press left and right arrow keys to change" after 2s).
+  - Initial work on data-driven Map Engine (MapEngine).
+  - Added .map file parser (no ASCII, purely key-value headers and object placeholders).
+  - Created first map: maps/reception.map.
+
 Version 0.0.6
   - Added radio button widget for settings with Left/Right arrow key support.
   - Added 2-finger swipe support for Android to change radio options without triggering back gestures.

@@ -3,6 +3,21 @@
 
 const MenuSystem = (() => {
   let stack = []; // each entry: { items, index, onSelect, onBack }
+  let hintTimer = null;
+
+  function clearHintTimer() {
+    if (hintTimer) {
+      clearTimeout(hintTimer);
+      hintTimer = null;
+    }
+  }
+
+  function startHintTimer() {
+    clearHintTimer();
+    hintTimer = setTimeout(() => {
+      SoundBank.speak('Press left and right arrow keys to change.', 1.2);
+    }, 2000);
+  }
 
   function current() {
     return stack.length > 0 ? stack[stack.length - 1] : null;
@@ -14,9 +29,11 @@ const MenuSystem = (() => {
       SoundBank.speak('Empty menu.');
       return;
     }
+    clearHintTimer();
     const item = menu.items[menu.index];
     if (item && item.type === 'radio') {
       SoundBank.speak(item.label + ': ' + item.currentValue, 1.2);
+      startHintTimer();
       return;
     }
     const label = typeof item === 'string' ? item : item.label;
@@ -66,6 +83,7 @@ const MenuSystem = (() => {
       SoundBank.menuMove();
       if (item.onChange) item.onChange(item.currentValue);
       SoundBank.speak(item.currentValue, 1.2);
+      startHintTimer();
     }
   }
 
@@ -80,6 +98,7 @@ const MenuSystem = (() => {
       SoundBank.menuMove();
       if (item.onChange) item.onChange(item.currentValue);
       SoundBank.speak(item.currentValue, 1.2);
+      startHintTimer();
     }
   }
 
@@ -151,6 +170,7 @@ const MenuSystem = (() => {
 
   function handleKey(e) {
     if (!current()) return false;
+    clearHintTimer();
 
     switch (e.key) {
       case 'ArrowUp':
@@ -222,6 +242,7 @@ const MenuSystem = (() => {
       const threshold = 50;
       
       if (Math.abs(deltaX) > threshold) {
+        clearHintTimer();
         if (deltaX > 0) {
           navigateRight();
         } else {
