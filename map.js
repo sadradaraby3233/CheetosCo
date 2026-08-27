@@ -4,7 +4,7 @@
 const MapEngine = (() => {
   let currentMap = null;
   const player = { x: 10, y: 18, z: 0, radius: 0.4, facing: 0 };
-  let trackIndex = 0;
+  let trackedTarget = null;
 
   function parseVec(str) { return str.split(',').map(Number); }
 
@@ -23,24 +23,18 @@ const MapEngine = (() => {
       const line = rawLine.trim();
       if (!line || line.startsWith('#')) continue;
 
-      // Zone parsing: zone::minx:miny:minz:maxx:maxy:maxz:name
       if (line.toLowerCase().startsWith('zone::')) {
         const parts = line.substring(6).split(':');
         if (parts.length >= 7) {
           mapData.zones.push({
-            minx: parseFloat(parts[0]),
-            miny: parseFloat(parts[1]),
-            minz: parseFloat(parts[2]),
-            maxx: parseFloat(parts[3]),
-            maxy: parseFloat(parts[4]),
-            maxz: parseFloat(parts[5]),
+            minx: parseFloat(parts[0]), miny: parseFloat(parts[1]), minz: parseFloat(parts[2]),
+            maxx: parseFloat(parts[3]), maxy: parseFloat(parts[4]), maxz: parseFloat(parts[5]),
             name: parts.slice(6).join(':')
           });
         }
         continue;
       }
 
-      // Object block start
       if (line.toLowerCase().startsWith('object:')) {
         if (currentObj) mapData.objects.push(currentObj);
         currentObj = { type: line.substring(7).trim(), props: {} };
@@ -110,65 +104,52 @@ object:npc\npos:9,6,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcom
     return null;
   }
 
-  function getDirectionName(dx, dy) {
-    const angle = Math.atan2(dx, dy) * 180 / Math.PI;
-    const dirs = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
-    const idx = Math.round(((angle + 360) % 360) / 45) % 8;
-    return dirs[idx];
+  function readLocation() {
+    const zone = getZoneAt(player.x, player.y, player.z);
+    if (zone) SoundBank.speak(zone.name, 1.2);
+    else SoundBank.speak('You are in an unmarked area.', 1.2);
   }
 
-  function describeDistance(d) {
-    if (d < 2) return 'right next to you';
-    if (d < 5) return 'very close';
-    if (d < 10) return 'nearby';
-    if (d < 20) return 'a bit far';
-    return 'far away';
-  }
-
-  function getNearbyObjects(maxDist) {
+  function getTrackableObjects() {
     if (!currentMap) return [];
     const results = [];
     for (const obj of currentMap.objects) {
-      const pos = obj.props.pos;
-      if (!pos) continue;
-      const size = obj.props.size || [0, 0, 0];
-      const cx = pos[0] + size[0] / 2;
-      const cy = pos[1] + size[1] / 2;
-      const dx = cx - player.x;
-      const dy = cy - player.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= maxDist) {
-        results.push({
-          obj: obj,
-          dist: dist,
-          dir: getDirectionName(dx, dy),
-          name: obj.props.name || obj.props.id || obj.type
-        });
-      }
+      if (obj.type === 'wall') continue;
+      const name = obj.props.name || obj.props.id || obj.type;
+      if (name) results.push({ name, obj });
     }
-    results.sort((a, b) => a.dist - b.dist);
     return results;
   }
 
-  function trackObjects() {
-    const objs = getNearbyObjects(50);
-    if (objs.length === 0) {
-      SoundBank.speak('Nothing nearby.', 1.2);
-      return;
-    }
-    trackIndex = trackIndex % objs.length;
-    const o = objs[trackIndex];
-    SoundBank.speak(o.name + ', ' + o.dir + ', ' + describeDistance(o.dist) + '.', 1.2);
-    trackIndex++;
+  function setTarget(obj) { trackedTarget = obj; }
+  function getTarget() { return trackedTarget; }
+  function clearTarget() { trackedTarget = null; }
+
+  function getTargetDirection() {
+    if (!trackedTarget) return null;
+    const pos = trackedTarget.props.pos;
+    if (!pos) return null;
+    const size = trackedTarget.props.size || [0,0,0];
+    const cx = pos[0] + size[0]/2;
+    const cy = pos[1] + size[1]/2;
+    const dx = cx - player.x;
+    const dy = cy - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    let angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+    if (angle < 0) angle += 360;
+    
+    let diff = angle - player.facing;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    
+    return { dist, diff, angle };
   }
 
-  function readLocation() {
-    const zone = getZoneAt(player.x, player.y, player.z);
-    if (zone) {
-      SoundBank.speak(zone.name, 1.2);
-    } else {
-      SoundBank.speak('You are in an unmarked area.', 1.2);
-    }
+  function checkArrival() {
+    if (!trackedTarget) return false;
+    const dir = getTargetDirection();
+    return dir && dir.dist < 1.5;
   }
 
   function checkCollision(nx, ny, nz) {
@@ -197,14 +178,18 @@ object:npc\npos:9,6,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcom
     if (!checkCollision(nx, ny, player.z)) {
       player.x = nx;
       player.y = ny;
-      if (dx > 0) player.facing = 90;
+      if (dy < 0) player.facing = 0;
+      else if (dx > 0) player.facing = 90;
+      else if (dy > 0) player.facing = 180;
       else if (dx < 0) player.facing = 270;
-      else if (dy > 0) player.facing = 0;
-      else if (dy < 0) player.facing = 180;
       return true;
     }
     return false;
   }
 
-  return { load, getCurrent, getPlayer, move, trackObjects, readLocation };
+  return {
+    load, getCurrent, getPlayer, move, readLocation,
+    getTrackableObjects, setTarget, getTarget, clearTarget,
+    getTargetDirection, checkArrival
+  };
 })();

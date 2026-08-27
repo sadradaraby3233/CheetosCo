@@ -178,6 +178,22 @@ const SoundBank = (() => {
     }
   }
 
+  function beaconBeep() {
+    const c = getCtx();
+    const t = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, t);
+    osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  }
+
   // --- Speech helper ---
 
   let speechMode = localStorage.getItem('cheetos_speech_mode') || 'sr';
@@ -339,6 +355,7 @@ const SoundBank = (() => {
     pickup,
     drop,
     step,
+    beaconBeep,
     doorOpen,
     doorClose,
     timerTick,

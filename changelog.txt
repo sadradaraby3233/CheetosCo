@@ -1,10 +1,17 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.2.0
+  - Added interactive tracking beacon system.
+  - Press T to open a menu of trackable objects. Selecting one locks it as a target.
+  - A repeating beacon beep plays while a target is locked.
+  - Press W to hear the direction (e.g. "straight in front", "slightly to the left") and distance to the target.
+  - Press T again or arrive at the target to cancel tracking.
+  - Removed WASD movement to free up W for the "Where is target?" command.
+
 Version 0.1.2
   - Added zone system for named map areas (zone::minx:miny:minz:maxx:maxy:maxz:name).
   - Press B to read your current zone/location.
-  - Press T to track nearby objects with direction and distance.
   - Added named labels to map objects for better tracking announcements.
 
 Version 0.1.1
