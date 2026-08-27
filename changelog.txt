@@ -1,0 +1,5 @@
+CheetosCo — Changelog
+=====================
+
+Version 0.0.0
+  - Set up GitHub repo and doing tasks in the background.
