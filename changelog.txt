@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.0.9
+  - Upgraded Map Engine to full 3D (added minz/maxz coordinates).
+  - X is Left/Right, Y is Back/Forward, Z is Up/Down (stairs/elevation).
+  - Added block-based object parser for the .map format.
+  - Created a highly advanced reception.map with walls, furniture, stairs, doors, and an NPC.
+
 Version 0.0.8
   - Fixed radio button hint timer: it no longer nags you after you already use the left/right arrow keys.
 
