@@ -182,6 +182,19 @@ const SoundBank = (() => {
     osc.start(t); osc.stop(t + 0.12);
   }
 
+  // --- Dialog sounds ---
+  function dialogOpen() {
+    playTone(500, 0.1, 'sine', 0.2);
+    playTone(700, 0.1, 'sine', 0.2, 0.08);
+    playTone(900, 0.15, 'sine', 0.25, 0.16);
+  }
+
+  function dialogFinish() {
+    playTone(900, 0.1, 'sine', 0.2);
+    playTone(700, 0.1, 'sine', 0.2, 0.08);
+    playTone(500, 0.15, 'sine', 0.15, 0.16);
+  }
+
   // --- Speech ---
   let speechMode = localStorage.getItem('cheetos_speech_mode') || 'sr';
   function getSpeechMode() { return speechMode; }
@@ -316,6 +329,7 @@ const SoundBank = (() => {
     menuMove, menuSelect, menuBack, menuOpen, menuClose,
     click, confirm, error, warning, success, fail,
     ambient, pickup, drop, step, beaconBeep, lockOn,
+    dialogOpen, dialogFinish,
     doorOpen, doorClose, timerTick, timerAlarm,
     getSpeechMode, setSpeechMode, speak,
     startMenuMusic, stopMenuMusic, fadeMusicAndStop,

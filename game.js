@@ -3,10 +3,76 @@
 const Game = (() => {
   let worldActive = false;
   let inTrackingMenu = false;
+  let inDialog = false;
   let beaconInterval = null;
   let wasAhead = false;
   let lastZoneName = null;
 
+  // --- Dialog System ---
+  let dialogLines = [];
+  let dialogIndex = 0;
+
+  const DIALOGS = {
+    welcome_quest: [
+      'Oh, hello there! Welcome to Cheetos Company.',
+      'I am the receptionist. We have been expecting you.',
+      'The office is just down the hall. Feel free to look around!',
+      'If you need anything, just come back and talk to me.'
+    ]
+  };
+
+  function openDialog(dialogId) {
+    const lines = DIALOGS[dialogId];
+    if (!lines || lines.length === 0) return;
+    inDialog = true;
+    dialogLines = lines;
+    dialogIndex = 0;
+    SoundBank.dialogOpen();
+    speakCurrentDialogLine();
+  }
+
+  function speakCurrentDialogLine() {
+    if (dialogIndex < dialogLines.length) {
+      SoundBank.speak(dialogLines[dialogIndex], 1.2);
+    }
+  }
+
+  function advanceDialog() {
+    dialogIndex++;
+    if (dialogIndex < dialogLines.length) {
+      speakCurrentDialogLine();
+    } else {
+      closeDialog();
+    }
+  }
+
+  function repeatDialogLine() {
+    speakCurrentDialogLine();
+  }
+
+  function closeDialog() {
+    inDialog = false;
+    dialogLines = [];
+    dialogIndex = 0;
+    SoundBank.dialogFinish();
+  }
+
+  function handleDialogKey(e) {
+    if (!inDialog) return false;
+    e.preventDefault();
+    if (e.key === 'Enter') {
+      advanceDialog();
+      return true;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      repeatDialogLine();
+      return true;
+    }
+    return false;
+  }
+
+  // --- Init ---
   function init() {
     SoundBank.speak('Cheetos Company. Press Enter to begin.', 1, () => {
       document.addEventListener('keydown', startOnEnter);
@@ -50,6 +116,7 @@ const Game = (() => {
   function enterWorld() {
     worldActive = true;
     inTrackingMenu = false;
+    inDialog = false;
     wasAhead = false;
     lastZoneName = null;
     document.removeEventListener('keydown', MenuSystem.handleKey);
@@ -65,7 +132,6 @@ const Game = (() => {
       SoundBank.speak('Entered the world.', 1.2);
     }
 
-    // Set initial zone silently
     const zone = MapEngine.getZoneAt(player.x, player.y, player.z);
     if (zone) lastZoneName = zone.name;
   }
@@ -119,10 +185,28 @@ const Game = (() => {
     beaconInterval = setInterval(() => {
       const target = MapEngine.getTarget();
       if (!target) { stopBeacon(); return; }
+
+      // Stop beacon when in interaction range
+      if (MapEngine.isInInteractionRange()) {
+        stopBeacon();
+        const name = target.props.name || target.props.id || target.type;
+        SoundBank.speak('You have reached ' + name + '.', 1.2);
+
+        // If it's an NPC with a dialog, open it
+        if (target.type === 'npc' && target.props.dialog) {
+          MapEngine.clearTarget();
+          wasAhead = false;
+          openDialog(target.props.dialog);
+        } else {
+          MapEngine.clearTarget();
+          wasAhead = false;
+        }
+        return;
+      }
+
       const tPos = MapEngine.getTargetPosition();
       SoundBank.beaconBeep(tPos);
 
-      // Radar lock-on when target is straight ahead
       const isAhead = MapEngine.isTargetAhead();
       if (isAhead && !wasAhead) {
         SoundBank.lockOn();
@@ -159,17 +243,19 @@ const Game = (() => {
 
   function handleWorldKey(e) {
     if (!worldActive || inTrackingMenu) return;
-    e.preventDefault();
-    let moved = false;
 
-    if (e.key === 'ArrowUp') moved = MapEngine.move(0, -0.5);
-    else if (e.key === 'ArrowDown') moved = MapEngine.move(0, 0.5);
-    else if (e.key === 'ArrowLeft') moved = MapEngine.move(-0.5, 0);
-    else if (e.key === 'ArrowRight') moved = MapEngine.move(0.5, 0);
-    else if (e.key === 'b') { MapEngine.readLocation(); return; }
-    else if (e.key === 't') { toggleTracking(); return; }
-    else if (e.key === 'w') { describeTarget(); return; }
-    else if (e.key === 'Escape') {
+    // Dialog takes priority and pauses the game
+    if (inDialog) {
+      handleDialogKey(e);
+      return;
+    }
+
+    e.preventDefault();
+
+    if (e.key === 'b') { MapEngine.readLocation(); return; }
+    if (e.key === 't') { toggleTracking(); return; }
+    if (e.key === 'w') { describeTarget(); return; }
+    if (e.key === 'Escape') {
       worldActive = false;
       stopBeacon();
       MapEngine.clearTarget();
@@ -180,6 +266,21 @@ const Game = (() => {
       openMainMenu();
       return;
     }
+
+    // Movement
+    let moved = false;
+    let hitObject = null;
+    let dx = 0, dy = 0;
+
+    if (e.key === 'ArrowUp') { dy = -0.5; }
+    else if (e.key === 'ArrowDown') { dy = 0.5; }
+    else if (e.key === 'ArrowLeft') { dx = -0.5; }
+    else if (e.key === 'ArrowRight') { dx = 0.5; }
+    else return;
+
+    const result = MapEngine.move(dx, dy);
+    moved = result.moved;
+    hitObject = result.hitObject;
 
     if (moved) {
       SoundBank.step();
@@ -192,19 +293,34 @@ const Game = (() => {
         SoundBank.speak(zone.name, 1.2);
       }
 
-      if (MapEngine.checkArrival()) {
+      // Check if we've reached the tracked target
+      if (MapEngine.getTarget() && MapEngine.isInInteractionRange()) {
         const target = MapEngine.getTarget();
-        if (target) {
-          const name = target.props.name || target.props.id || target.type;
-          SoundBank.speak('Arrived at ' + name, 1.2);
-        }
+        const name = target.props.name || target.props.id || target.type;
+        SoundBank.speak('You have reached ' + name + '.', 1.2);
         stopBeacon();
-        MapEngine.clearTarget();
-        wasAhead = false;
+
+        if (target.type === 'npc' && target.props.dialog) {
+          MapEngine.clearTarget();
+          wasAhead = false;
+          openDialog(target.props.dialog);
+        } else {
+          MapEngine.clearTarget();
+          wasAhead = false;
+        }
       }
     } else {
-      SoundBank.playTone(120, 0.08, 'sawtooth', 0.2);
-      SoundBank.playNoise(0.05, 0.1);
+      // Bumped into something
+      if (hitObject && hitObject.type === 'npc') {
+        const name = hitObject.props.name || hitObject.props.id || 'someone';
+        SoundBank.speak('You bump into ' + name + '.', 1.2);
+        if (hitObject.props.dialog) {
+          openDialog(hitObject.props.dialog);
+        }
+      } else {
+        SoundBank.playTone(120, 0.08, 'sawtooth', 0.2);
+        SoundBank.playNoise(0.05, 0.1);
+      }
     }
   }
 

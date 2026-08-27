@@ -41,7 +41,7 @@ const MapEngine = (() => {
       const colonIdx = line.indexOf(':');
       if (colonIdx !== -1) {
         const key = line.substring(0, colonIdx).trim().toLowerCase();
-        const value = line.substring(colonIdx + 1).trim();
+        const value = line.substring(colonIdx + 1:].trim();
         if (currentObj) {
           if (key === 'pos' || key === 'size') currentObj.props[key] = parseVec(value);
           else if (key === 'solid' || key === 'interactive') currentObj.props[key] = value.toLowerCase() === 'true';
@@ -70,7 +70,7 @@ const MapEngine = (() => {
       currentMap = parseMapText(text);
     } catch (err) {
       console.warn('Map fetch failed, using fallback for ' + mapName, err);
-      const fallback = 'mapname:reception hallway\nminx:0\nminy:0\nminz:0\nmaxx:20\nmaxy:20\nmaxz:3\n\nzone::0:0:0:20:10:100000:the north end of the hallway\nzone::0:10:0:20:20:100000:the south end of the hallway\n\nobject:wall\npos:0,0,0\nsize:20,1,3\nsolid:true\n\nobject:wall\npos:0,0,0\nsize:1,20,3\nsolid:true\n\nobject:wall\npos:19,0,0\nsize:1,20,3\nsolid:true\n\nobject:wall\npos:0,19,0\nsize:20,1,3\nsolid:true\n\nobject:furniture\npos:5,4,0\nsize:4,2,1\ntype:desk\nname:the reception desk\nsolid:true\n\nobject:stairs\npos:15,15,0\nsize:4,4,3\nname:the stairs\nz_to:3\n\nobject:door\npos:10,19,0\nsize:2,1,3\nname:the entrance doors\nsolid:true\ninteractive:true\n\nobject:npc\npos:7,7,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcome_quest';
+      const fallback = 'mapname:reception hallway\nminx:0\nminy:0\nminz:0\nmaxx:20\nmaxy:20\nmaxz:3\n\nzone::0:0:0:20:10:100000:the north end of the hallway\nzone::0:10:0:20:20:100000:the south end of the hallway\n\nobject:wall\npos:0,0,0\nsize:20,1,3\nsolid:true\n\nobject:wall\npos:0,0,0\nsize:1,20,3\nsolid:true\n\nobject:wall\npos:19,0,0\nsize:1,20,3\nsolid:true\n\nobject:wall\npos:0,19,0\nsize:20,1,3\nsolid:true\n\nobject:furniture\npos:5,4,0\nsize:4,2,1\ntype:desk\nname:the reception desk\nsolid:true\n\nobject:stairs\npos:15,15,0\nsize:4,4,3\nname:the stairs\nz_to:3\n\nobject:door\npos:10,19,0\nsize:2,1,3\nname:the entrance doors\nsolid:true\ninteractive:true\n\nobject:npc\npos:7,7,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcome_quest\nsolid:true';
       currentMap = parseMapText(fallback);
     }
     return currentMap;
@@ -132,12 +132,6 @@ const MapEngine = (() => {
     const dy = tpos.y - player.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Truly on top: both axes < 0.3
-    if (Math.abs(dx) < 0.3 && Math.abs(dy) < 0.3) {
-      return { dist: dist, dx: dx, dy: dy, dirStr: 'right on top of you' };
-    }
-
-    // Direction from raw dx/dy using small thresholds
     let aheadBehind = '';
     let leftRight = '';
 
@@ -171,7 +165,7 @@ const MapEngine = (() => {
         dirStr = 'directly ' + leftRight;
       }
     } else {
-      dirStr = 'right on top of you';
+      dirStr = 'right next to you';
     }
 
     return { dist: dist, dx: dx, dy: dy, dirStr: dirStr };
@@ -183,20 +177,26 @@ const MapEngine = (() => {
     return d.dy < -0.5 && Math.abs(d.dx) < Math.max(2.0, Math.abs(d.dy) * 0.3);
   }
 
-  function checkArrival() {
+  // Interaction range: close enough to interact
+  function isInInteractionRange() {
     if (!trackedTarget) return false;
     const d = getTargetDirection();
-    return d && d.dist < 1.5;
+    return d && d.dist < 2.0;
   }
 
-  function checkCollision(nx, ny, nz) {
-    if (!currentMap) return true;
+  function checkArrival() {
+    return isInInteractionRange();
+  }
+
+  // Returns the object that blocks movement, or null
+  function getCollidingObject(nx, ny, nz) {
+    if (!currentMap) return null;
     const r = player.radius;
-    if (nx - r < currentMap.minx || nx + r > currentMap.maxx ||
-        ny - r < currentMap.miny || ny + r > currentMap.maxy) return true;
 
     for (const obj of currentMap.objects) {
-      if (!obj.props.solid) continue;
+      // NPCs are always solid
+      const isSolid = obj.props.solid === true || obj.type === 'npc';
+      if (!isSolid) continue;
       const pos = obj.props.pos;
       const size = obj.props.size;
       if (!pos || !size) continue;
@@ -204,27 +204,39 @@ const MapEngine = (() => {
       const sx = size[0], sy = size[1];
       if (nx + r > ox && nx - r < ox + sx &&
           ny + r > oy && ny - r < oy + sy) {
-        return true;
+        return obj;
       }
     }
-    return false;
+    return null;
   }
 
+  function checkCollision(nx, ny, nz) {
+    if (!currentMap) return true;
+    const r = player.radius;
+    if (nx - r < currentMap.minx || nx + r > currentMap.maxx ||
+        ny - r < currentMap.miny || ny + r > currentMap.maxy) return true;
+    return getCollidingObject(nx, ny, nz) !== null;
+  }
+
+  // move returns {moved: bool, hitObject: obj|null}
   function move(dx, dy) {
     const nx = player.x + dx;
     const ny = player.y + dy;
+    const hitObj = getCollidingObject(nx, ny, player.z);
+
     if (!checkCollision(nx, ny, player.z)) {
       player.x = nx;
       player.y = ny;
       SoundBank.updateListener(player.x, player.y, player.z);
-      return true;
+      return { moved: true, hitObject: null };
     }
-    return false;
+    return { moved: false, hitObject: hitObj };
   }
 
   return {
     load, getCurrent, getPlayer, move, readLocation,
     getTrackableObjects, setTarget, getTarget, clearTarget,
-    getTargetDirection, getTargetPosition, isTargetAhead, checkArrival
+    getTargetDirection, getTargetPosition, isTargetAhead,
+    checkArrival, isInInteractionRange, getCollidingObject
   };
 })();

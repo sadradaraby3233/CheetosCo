@@ -1,6 +1,16 @@
 CheetosCo — Changelog
 =====================
 
+Version 2.1.0
+  - Added full Dialog System: dialog open sound, Enter to advance,
+    arrow keys to repeat current line, game pauses during dialog.
+  - Dialog finish sound plays when conversation ends.
+  - NPCs are now solid/bumpable. Walking into one announces who you bumped into.
+  - Tracking auto-stops when you reach interaction range of the target.
+  - Walking into an NPC with a dialog auto-opens the conversation.
+  - Removed "right on top of you" text, replaced with "right next to you".
+  - Fixed direction description for close-but-not-on-top scenarios.
+
 Version 2.0.1
   - Fixed "right on top of you" false positive: thresholds lowered to 0.3
     so direction is described even when the target is close but not on top of you.

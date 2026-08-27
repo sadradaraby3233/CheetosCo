@@ -53,9 +53,10 @@ name:the entrance doors
 solid:true
 interactive:true
 
-# NPC (behind the desk, not inside it)
+# NPC (solid, bumpable, with dialog)
 object:npc
 pos:7,7,0
 id:receptionist
 name:Cheetos Receptionist
 dialog:welcome_quest
+solid:true
