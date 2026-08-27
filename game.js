@@ -68,6 +68,12 @@ const Game = (() => {
         SoundBank.speak('Nothing to track.');
         return;
       }
+      
+      // Temporarily switch to menu controls
+      worldActive = false;
+      document.removeEventListener('keydown', handleWorldKey);
+      document.addEventListener('keydown', MenuSystem.handleKey);
+      
       const items = objs.map(o => o.name);
       items.push('Cancel');
       MenuSystem.open({
@@ -75,16 +81,26 @@ const Game = (() => {
         onSelect: (index) => {
           if (index === items.length - 1) {
             MenuSystem.back();
+            returnToWorld();
             return;
           }
           MapEngine.setTarget(objs[index].obj);
           MenuSystem.back();
           SoundBank.speak('Tracking ' + objs[index].name, 1.2);
           startBeacon();
+          returnToWorld();
         },
-        onBack: () => {}
+        onBack: () => {
+          returnToWorld();
+        }
       });
     }
+  }
+  
+  function returnToWorld() {
+    document.removeEventListener('keydown', MenuSystem.handleKey);
+    document.addEventListener('keydown', handleWorldKey);
+    worldActive = true;
   }
 
   function startBeacon() {

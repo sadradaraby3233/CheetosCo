@@ -1,6 +1,10 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.2.1
+  - Fixed critical bug: tracking menu now properly switches between world and menu controls.
+  - The menu no longer stacks up when pressing Escape while in the tracking menu.
+
 Version 0.2.0
   - Added interactive tracking beacon system.
   - Press T to open a menu of trackable objects. Selecting one locks it as a target.
