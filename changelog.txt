@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.0.5
+  - Added Speech settings menu to choose between Screen Reader and Browser TTS.
+  - Hidden Screen Reader option on Android (since TalkBack must be disabled to play).
+  - Increased menu TTS speech rate to 1.2x and reduced interrupt delay for snappier navigation.
+  - Settings are now saved to localStorage.
+
 Version 0.0.4
   - Added NVDA/screen reader support via ARIA live regions.
   - Added TTS interrupt flag to prevent speech overlap.

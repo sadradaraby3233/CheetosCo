@@ -16,7 +16,7 @@ const MenuSystem = (() => {
     }
     const item = menu.items[menu.index];
     const label = typeof item === 'string' ? item : item.label;
-    SoundBank.speak(label);
+    SoundBank.speak(label, 1.2);
   }
 
   function navigateUp() {
@@ -80,7 +80,7 @@ const MenuSystem = (() => {
     const item = menu.items[menu.index];
     const label = typeof item === 'string' ? item : item.label;
     const pos = (menu.index + 1) + ' of ' + menu.items.length;
-    SoundBank.speak(label + ', ' + pos);
+    SoundBank.speak(label + ', ' + pos, 1.2);
   }
 
   function open(config) {

@@ -156,12 +156,28 @@ const SoundBank = (() => {
 
   // --- Speech helper ---
 
+  let speechMode = localStorage.getItem('cheetos_speech_mode') || 'sr';
+
+  function getSpeechMode() { return speechMode; }
+  function setSpeechMode(mode) {
+    speechMode = mode;
+    localStorage.setItem('cheetos_speech_mode', mode);
+  }
+
   function speak(text, rate, onEnd, interrupt = true) {
+    const mode = speechMode;
     const liveRegion = document.getElementById('tts-live');
-    if (liveRegion) {
-      liveRegion.textContent = '';
-      setTimeout(() => { liveRegion.textContent = text; }, 10);
+
+    if (mode === 'sr') {
+      if (liveRegion) {
+        liveRegion.textContent = '';
+        setTimeout(() => { liveRegion.textContent = text; }, 10);
+      }
+      if (onEnd) setTimeout(onEnd, Math.max(100, text.length * 40));
+      return;
     }
+
+    if (liveRegion) liveRegion.textContent = '';
 
     if (typeof speechSynthesis === 'undefined' || !window.SpeechSynthesisUtterance) {
       if (onEnd) setTimeout(onEnd, 100);
@@ -170,16 +186,18 @@ const SoundBank = (() => {
     
     if (interrupt) {
       speechSynthesis.cancel();
-    }
-
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = rate || 1;
-    u.onend = onEnd || null;
-    u.onerror = () => { if (onEnd) onEnd(); };
-    
-    if (interrupt) {
-      setTimeout(() => speechSynthesis.speak(u), 50);
+      setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = rate || 1;
+        u.onend = onEnd || null;
+        u.onerror = () => { if (onEnd) onEnd(); };
+        speechSynthesis.speak(u);
+      }, 10);
     } else {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = rate || 1;
+      u.onend = onEnd || null;
+      u.onerror = () => { if (onEnd) onEnd(); };
       speechSynthesis.speak(u);
     }
   }
@@ -283,6 +301,8 @@ const SoundBank = (() => {
     timerTick,
     timerAlarm,
     // Speech
+    getSpeechMode,
+    setSpeechMode,
     speak,
     startMenuMusic,
     stopMenuMusic

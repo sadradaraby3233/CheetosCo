@@ -50,12 +50,16 @@ const Game = (() => {
           return;
         }
         const label = typeof item === 'string' ? item : item.label;
-        SoundBank.speak(label + ' options.', 1, () => {
-          MenuSystem.open({
-            items: ['Back'],
-            onSelect: () => MenuSystem.back(),
-            onBack: () => {}
-          });
+        SoundBank.speak(label + ' options.', 1.2, () => {
+          if (label === 'Speech') {
+            openSpeechOptions();
+          } else {
+            MenuSystem.open({
+              items: ['Back'],
+              onSelect: () => MenuSystem.back(),
+              onBack: () => {}
+            });
+          }
         }, false);
       },
       onBack: () => {
@@ -64,6 +68,54 @@ const Game = (() => {
     });
   }
 
+  function openSpeechOptions() {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const currentMode = SoundBank.getSpeechMode();
+  
+    const options = [];
+    if (!isAndroid) {
+      options.push({ label: 'Screen Reader', value: 'sr' });
+      options.push({ label: 'Browser TTS', value: 'tts' });
+    }
+  
+    const items = options.map(o => ({
+      label: o.label + (o.value === currentMode ? ' (On)' : ' (Off)'),
+      value: o.value
+    }));
+    items.push('Back');
+  
+    MenuSystem.open({
+      items: items,
+      onSelect: (index, item) => {
+        if (index === items.length - 1) {
+          MenuSystem.back();
+          return;
+        }
+        if (item.value) {
+          SoundBank.setSpeechMode(item.value);
+          const newLabel = item.label.replace(/ \((On|Off)\)/, '');
+          SoundBank.speak('Speech mode set to ' + newLabel, 1.2, () => {
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const currentMode = SoundBank.getSpeechMode();
+            const options = [];
+            if (!isAndroid) {
+              options.push({ label: 'Screen Reader', value: 'sr' });
+              options.push({ label: 'Browser TTS', value: 'tts' });
+            }
+            const newItems = options.map(o => ({
+              label: o.label + (o.value === currentMode ? ' (On)' : ' (Off)'),
+              value: o.value
+            }));
+            newItems.push('Back');
+            MenuSystem.replaceItems(newItems);
+            MenuSystem.announce();
+          }, false);
+        }
+      },
+      onBack: () => {}
+    });
+  }
+  
   function exitGame() {
     SoundBank.stopMenuMusic();
     SoundBank.speak('Goodbye!');
