@@ -1,6 +1,10 @@
 // CheetosCo — Main Game
 
 const Game = (() => {
+  let worldActive = false;
+  let inTrackingMenu = false;
+  let beaconInterval = null;
+
   function init() {
     SoundBank.speak('Cheetos Company. Press Enter to begin.', 1, () => {
       document.addEventListener('keydown', startOnEnter);
@@ -30,9 +34,6 @@ const Game = (() => {
       onBack: () => {}
     });
   }
-
-  let worldActive = false;
-  let beaconInterval = null;
   
   function startGame() {
     SoundBank.fadeMusicAndStop(1.5);
@@ -46,14 +47,25 @@ const Game = (() => {
   
   function enterWorld() {
     worldActive = true;
+    inTrackingMenu = false;
     document.removeEventListener('keydown', MenuSystem.handleKey);
     document.addEventListener('keydown', handleWorldKey);
+    
+    const player = MapEngine.getPlayer();
+    SoundBank.updateListener(player.x, player.y, player.z, player.facing);
+    
     const map = MapEngine.getCurrent();
     if (map) {
       SoundBank.speak('Entered ' + map.name + '.', 1.2);
     } else {
       SoundBank.speak('Entered the world.', 1.2);
     }
+  }
+
+  function exitTrackingMenu() {
+    inTrackingMenu = false;
+    MenuSystem.close();
+    enterWorld();
   }
 
   function toggleTracking() {
@@ -69,7 +81,7 @@ const Game = (() => {
         return;
       }
       
-      // Temporarily switch to menu controls
+      inTrackingMenu = true;
       worldActive = false;
       document.removeEventListener('keydown', handleWorldKey);
       document.addEventListener('keydown', MenuSystem.handleKey);
@@ -80,27 +92,19 @@ const Game = (() => {
         items: items,
         onSelect: (index) => {
           if (index === items.length - 1) {
-            MenuSystem.back();
-            returnToWorld();
+            exitTrackingMenu();
             return;
           }
           MapEngine.setTarget(objs[index].obj);
-          MenuSystem.back();
           SoundBank.speak('Tracking ' + objs[index].name, 1.2);
           startBeacon();
-          returnToWorld();
+          exitTrackingMenu();
         },
         onBack: () => {
-          returnToWorld();
+          exitTrackingMenu();
         }
       });
     }
-  }
-  
-  function returnToWorld() {
-    document.removeEventListener('keydown', MenuSystem.handleKey);
-    document.addEventListener('keydown', handleWorldKey);
-    worldActive = true;
   }
 
   function startBeacon() {
@@ -108,8 +112,9 @@ const Game = (() => {
     beaconInterval = setInterval(() => {
       const target = MapEngine.getTarget();
       if (!target) { stopBeacon(); return; }
-      SoundBank.beaconBeep();
-    }, 600);
+      const tPos = MapEngine.getTargetPosition();
+      SoundBank.beaconBeep(tPos);
+    }, 700);
   }
 
   function stopBeacon() {
@@ -129,13 +134,19 @@ const Game = (() => {
     if (!dir) return;
     
     let dirStr = '';
-    const absDiff = Math.abs(dir.diff);
-    if (absDiff < 15) dirStr = 'straight in front';
-    else if (absDiff < 45) dirStr = dir.diff > 0 ? 'in front and to the right' : 'in front and to the left';
-    else if (absDiff < 75) dirStr = dir.diff > 0 ? 'slightly to the right' : 'slightly to the left';
-    else if (absDiff < 105) dirStr = dir.diff > 0 ? 'directly to the right' : 'directly to the left';
-    else if (absDiff < 135) dirStr = dir.diff > 0 ? 'behind and to the right' : 'behind and to the left';
-    else dirStr = 'straight behind';
+    const absAngle = Math.abs(dir.relativeAngle);
+    
+    if (absAngle < 20) {
+      dirStr = 'straight ahead';
+    } else if (absAngle < 60) {
+      dirStr = dir.relativeAngle > 0 ? 'ahead and to the right' : 'ahead and to the left';
+    } else if (absAngle < 110) {
+      dirStr = dir.relativeAngle > 0 ? 'to your right' : 'to your left';
+    } else if (absAngle < 150) {
+      dirStr = dir.relativeAngle > 0 ? 'behind and to the right' : 'behind and to the left';
+    } else {
+      dirStr = 'directly behind you';
+    }
     
     let distStr = '';
     if (dir.dist < 2) distStr = ', very close';
@@ -148,9 +159,10 @@ const Game = (() => {
   }
 
   function handleWorldKey(e) {
-    if (!worldActive) return;
+    if (!worldActive || inTrackingMenu) return;
     e.preventDefault();
     let moved = false;
+    
     if (e.key === 'ArrowUp') moved = MapEngine.move(0, -0.5);
     else if (e.key === 'ArrowDown') moved = MapEngine.move(0, 0.5);
     else if (e.key === 'ArrowLeft') moved = MapEngine.move(-0.5, 0);
@@ -161,6 +173,7 @@ const Game = (() => {
     else if (e.key === 'Escape') {
       worldActive = false;
       stopBeacon();
+      MapEngine.clearTarget();
       document.removeEventListener('keydown', handleWorldKey);
       document.addEventListener('keydown', MenuSystem.handleKey);
       SoundBank.speak('Exited to menu.', 1.2);

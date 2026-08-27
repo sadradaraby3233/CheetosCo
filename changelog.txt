@@ -1,6 +1,13 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.3.0
+  - Implemented HRTF-based 3D audio system using Web Audio API PannerNode.
+  - Beacon beeps now use true 3D spatialization - you can hear the direction the sound is coming from.
+  - Fixed direction calculation: now properly accounts for player facing direction.
+  - Fixed tracking menu stack bug: pressing Escape now properly returns to world mode.
+  - Added listener position updates so 3D audio works correctly as you move.
+
 Version 0.2.1
   - Fixed critical bug: tracking menu now properly switches between world and menu controls.
   - The menu no longer stacks up when pressing Escape while in the tracking menu.

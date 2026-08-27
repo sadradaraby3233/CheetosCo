@@ -3,16 +3,63 @@
 
 const SoundBank = (() => {
   let ctx = null;
+  let listenerNode = null;
 
   function getCtx() {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      listenerNode = ctx.listener;
+    }
     return ctx;
+  }
+
+  // --- 3D Audio System ---
+  let audioListener = { x: 0, y: 0, z: 0, facing: 0 };
+  
+  function updateListener(x, y, z, facing) {
+    audioListener.x = x;
+    audioListener.y = y;
+    audioListener.z = z;
+    audioListener.facing = facing;
+    
+    if (listenerNode) {
+      // Convert facing angle to forward vector (facing 0 = north = -y in Web Audio)
+      const rad = (facing - 90) * Math.PI / 180;
+      const forwardX = Math.cos(rad);
+      const forwardZ = -Math.sin(rad);
+      
+      if (listenerNode.positionX) {
+        listenerNode.positionX.setValueAtTime(x, ctx.currentTime);
+        listenerNode.positionY.setValueAtTime(z, ctx.currentTime);
+        listenerNode.positionZ.setValueAtTime(-y, ctx.currentTime);
+        listenerNode.forwardX.setValueAtTime(forwardX, ctx.currentTime);
+        listenerNode.forwardY.setValueAtTime(0, ctx.currentTime);
+        listenerNode.forwardZ.setValueAtTime(forwardZ, ctx.currentTime);
+        listenerNode.upX.setValueAtTime(0, ctx.currentTime);
+        listenerNode.upY.setValueAtTime(1, ctx.currentTime);
+        listenerNode.upZ.setValueAtTime(0, ctx.currentTime);
+      }
+    }
+  }
+
+  function createPanner() {
+    const c = getCtx();
+    const panner = c.createPanner();
+    panner.panningModel = 'HRTF';
+    panner.distanceModel = 'inverse';
+    panner.refDistance = 1;
+    panner.maxDistance = 100;
+    panner.rolloffFactor = 1;
+    panner.coneInnerAngle = 360;
+    panner.coneOuterAngle = 0;
+    panner.coneOuterGain = 0;
+    return panner;
   }
 
   // --- Core helpers ---
 
-  function playTone(freq, duration, type, volume, startDelay) {
+  function playTone(freq, duration, type, volume, startDelay, position) {
     const c = getCtx();
     const t = c.currentTime + (startDelay || 0);
     const osc = c.createOscillator();
@@ -21,13 +68,27 @@ const SoundBank = (() => {
     osc.frequency.setValueAtTime(freq, t);
     gain.gain.setValueAtTime(volume || 0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-    osc.connect(gain);
-    gain.connect(c.destination);
+    
+    if (position) {
+      const panner = createPanner();
+      if (panner.positionX) {
+        panner.positionX.setValueAtTime(position.x, t);
+        panner.positionY.setValueAtTime(position.z, t);
+        panner.positionZ.setValueAtTime(-position.y, t);
+      }
+      osc.connect(gain);
+      gain.connect(panner);
+      panner.connect(c.destination);
+    } else {
+      osc.connect(gain);
+      gain.connect(c.destination);
+    }
+    
     osc.start(t);
     osc.stop(t + duration + 0.01);
   }
 
-  function playNoise(duration, volume, startDelay) {
+  function playNoise(duration, volume, startDelay, position) {
     const c = getCtx();
     const t = c.currentTime + (startDelay || 0);
     const bufferSize = Math.max(1, Math.floor(c.sampleRate * duration));
@@ -41,8 +102,22 @@ const SoundBank = (() => {
     const gain = c.createGain();
     gain.gain.setValueAtTime(volume || 0.1, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-    src.connect(gain);
-    gain.connect(c.destination);
+    
+    if (position) {
+      const panner = createPanner();
+      if (panner.positionX) {
+        panner.positionX.setValueAtTime(position.x, t);
+        panner.positionY.setValueAtTime(position.z, t);
+        panner.positionZ.setValueAtTime(-position.y, t);
+      }
+      src.connect(gain);
+      gain.connect(panner);
+      panner.connect(c.destination);
+    } else {
+      src.connect(gain);
+      gain.connect(c.destination);
+    }
+    
     src.start(t);
     src.stop(t + duration + 0.01);
   }
@@ -178,7 +253,7 @@ const SoundBank = (() => {
     }
   }
 
-  function beaconBeep() {
+  function beaconBeep(position) {
     const c = getCtx();
     const t = c.currentTime;
     const osc = c.createOscillator();
@@ -186,10 +261,24 @@ const SoundBank = (() => {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(1200, t);
     osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
-    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.setValueAtTime(0.25, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-    osc.connect(gain);
-    gain.connect(c.destination);
+    
+    if (position) {
+      const panner = createPanner();
+      if (panner.positionX) {
+        panner.positionX.setValueAtTime(position.x, t);
+        panner.positionY.setValueAtTime(position.z, t);
+        panner.positionZ.setValueAtTime(-position.y, t);
+      }
+      osc.connect(gain);
+      gain.connect(panner);
+      panner.connect(c.destination);
+    } else {
+      osc.connect(gain);
+      gain.connect(c.destination);
+    }
+    
     osc.start(t);
     osc.stop(t + 0.12);
   }
@@ -366,6 +455,7 @@ const SoundBank = (() => {
     speak,
     startMenuMusic,
     stopMenuMusic,
-    fadeMusicAndStop
+    fadeMusicAndStop,
+    updateListener
   };
 })();
