@@ -3,7 +3,10 @@
 
 const MapEngine = (() => {
   let currentMap = null;
-  const player = { x: 10, y: 18, z: 0, radius: 0.4 };
+  const player = { x: 10, y: 18, z: 0, radius: 0.4, facing: 0 };
+  let trackIndex = 0;
+
+  function parseVec(str) { return str.split(',').map(Number); }
 
   function parseMapText(text) {
     const lines = text.split('\n');
@@ -11,15 +14,33 @@ const MapEngine = (() => {
       name: '',
       minx: 0, miny: 0, minz: 0,
       maxx: 0, maxy: 0, maxz: 0,
-      objects: []
+      objects: [],
+      zones: []
     };
     let currentObj = null;
-    const parseVec = (str) => str.split(',').map(Number);
 
     for (let rawLine of lines) {
       const line = rawLine.trim();
       if (!line || line.startsWith('#')) continue;
-      
+
+      // Zone parsing: zone::minx:miny:minz:maxx:maxy:maxz:name
+      if (line.toLowerCase().startsWith('zone::')) {
+        const parts = line.substring(6).split(':');
+        if (parts.length >= 7) {
+          mapData.zones.push({
+            minx: parseFloat(parts[0]),
+            miny: parseFloat(parts[1]),
+            minz: parseFloat(parts[2]),
+            maxx: parseFloat(parts[3]),
+            maxy: parseFloat(parts[4]),
+            maxz: parseFloat(parts[5]),
+            name: parts.slice(6).join(':')
+          });
+        }
+        continue;
+      }
+
+      // Object block start
       if (line.toLowerCase().startsWith('object:')) {
         if (currentObj) mapData.objects.push(currentObj);
         currentObj = { type: line.substring(7).trim(), props: {} };
@@ -30,7 +51,7 @@ const MapEngine = (() => {
       if (colonIdx !== -1) {
         const key = line.substring(0, colonIdx).trim().toLowerCase();
         const value = line.substring(colonIdx + 1).trim();
-        
+
         if (currentObj) {
           if (key === 'pos' || key === 'size') currentObj.props[key] = parseVec(value);
           else if (key === 'solid' || key === 'interactive') currentObj.props[key] = value.toLowerCase() === 'true';
@@ -60,41 +81,15 @@ const MapEngine = (() => {
     } catch (err) {
       console.warn('Map fetch failed, using fallback for ' + mapName, err);
       const fallback = `mapname:reception hallway\nminx:0\nminy:0\nminz:0\nmaxx:20\nmaxy:20\nmaxz:3\n
-object:wall
-pos:0,0,0
-size:20,1,3
-solid:true
-object:wall
-pos:0,0,0
-size:1,20,3
-solid:true
-object:wall
-pos:19,0,0
-size:1,20,3
-solid:true
-object:wall
-pos:0,19,0
-size:20,1,3
-solid:true
-object:furniture
-pos:8,5,0
-size:4,2,1
-type:desk
-solid:true
-object:stairs
-pos:15,15,0
-size:4,4,3
-z_to:3
-object:door
-pos:10,19,0
-size:2,1,3
-solid:true
-interactive:true
-object:npc
-pos:9,6,0
-id:receptionist
-name:Cheetos Receptionist
-dialog:welcome_quest`;
+zone::0:0:0:20:10:100000:the south end of the hallway\nzone::0:10:0:20:20:100000:the northeast side of the hallway\n
+object:wall\npos:0,0,0\nsize:20,1,3\nsolid:true\n
+object:wall\npos:0,0,0\nsize:1,20,3\nsolid:true\n
+object:wall\npos:19,0,0\nsize:1,20,3\nsolid:true\n
+object:wall\npos:0,19,0\nsize:20,1,3\nsolid:true\n
+object:furniture\npos:8,5,0\nsize:4,2,1\ntype:desk\nname:the reception desk\nsolid:true\n
+object:stairs\npos:15,15,0\nsize:4,4,3\nname:the stairs\nz_to:3\n
+object:door\npos:10,19,0\nsize:2,1,3\nname:the entrance doors\nsolid:true\ninteractive:true\n
+object:npc\npos:9,6,0\nid:receptionist\nname:Cheetos Receptionist\ndialog:welcome_quest`;
       currentMap = parseMapText(fallback);
     }
     return currentMap;
@@ -103,20 +98,91 @@ dialog:welcome_quest`;
   function getCurrent() { return currentMap; }
   function getPlayer() { return player; }
 
+  function getZoneAt(x, y, z) {
+    if (!currentMap) return null;
+    for (const zone of currentMap.zones) {
+      if (x >= zone.minx && x <= zone.maxx &&
+          y >= zone.miny && y <= zone.maxy &&
+          z >= zone.minz && z <= zone.maxz) {
+        return zone;
+      }
+    }
+    return null;
+  }
+
+  function getDirectionName(dx, dy) {
+    const angle = Math.atan2(dx, dy) * 180 / Math.PI;
+    const dirs = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+    const idx = Math.round(((angle + 360) % 360) / 45) % 8;
+    return dirs[idx];
+  }
+
+  function describeDistance(d) {
+    if (d < 2) return 'right next to you';
+    if (d < 5) return 'very close';
+    if (d < 10) return 'nearby';
+    if (d < 20) return 'a bit far';
+    return 'far away';
+  }
+
+  function getNearbyObjects(maxDist) {
+    if (!currentMap) return [];
+    const results = [];
+    for (const obj of currentMap.objects) {
+      const pos = obj.props.pos;
+      if (!pos) continue;
+      const size = obj.props.size || [0, 0, 0];
+      const cx = pos[0] + size[0] / 2;
+      const cy = pos[1] + size[1] / 2;
+      const dx = cx - player.x;
+      const dy = cy - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= maxDist) {
+        results.push({
+          obj: obj,
+          dist: dist,
+          dir: getDirectionName(dx, dy),
+          name: obj.props.name || obj.props.id || obj.type
+        });
+      }
+    }
+    results.sort((a, b) => a.dist - b.dist);
+    return results;
+  }
+
+  function trackObjects() {
+    const objs = getNearbyObjects(50);
+    if (objs.length === 0) {
+      SoundBank.speak('Nothing nearby.', 1.2);
+      return;
+    }
+    trackIndex = trackIndex % objs.length;
+    const o = objs[trackIndex];
+    SoundBank.speak(o.name + ', ' + o.dir + ', ' + describeDistance(o.dist) + '.', 1.2);
+    trackIndex++;
+  }
+
+  function readLocation() {
+    const zone = getZoneAt(player.x, player.y, player.z);
+    if (zone) {
+      SoundBank.speak(zone.name, 1.2);
+    } else {
+      SoundBank.speak('You are in an unmarked area.', 1.2);
+    }
+  }
+
   function checkCollision(nx, ny, nz) {
     if (!currentMap) return true;
-    if (nx - player.radius < currentMap.minx || nx + player.radius > currentMap.maxx || 
+    if (nx - player.radius < currentMap.minx || nx + player.radius > currentMap.maxx ||
         ny - player.radius < currentMap.miny || ny + player.radius > currentMap.maxy) return true;
-    
+
     for (const obj of currentMap.objects) {
       if (!obj.props.solid) continue;
       const pos = obj.props.pos;
       const size = obj.props.size;
       if (!pos || !size) continue;
-      
       const ox = pos[0], oy = pos[1];
       const sx = size[0], sy = size[1];
-      
       if (nx + player.radius > ox && nx - player.radius < ox + sx &&
           ny + player.radius > oy && ny - player.radius < oy + sy) {
         return true;
@@ -131,10 +197,14 @@ dialog:welcome_quest`;
     if (!checkCollision(nx, ny, player.z)) {
       player.x = nx;
       player.y = ny;
+      if (dx > 0) player.facing = 90;
+      else if (dx < 0) player.facing = 270;
+      else if (dy > 0) player.facing = 0;
+      else if (dy < 0) player.facing = 180;
       return true;
     }
     return false;
   }
 
-  return { load, getCurrent, getPlayer, move };
+  return { load, getCurrent, getPlayer, move, trackObjects, readLocation };
 })();

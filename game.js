@@ -63,6 +63,8 @@ const Game = (() => {
         else if (e.key === 'ArrowDown' || e.key === 's') moved = MapEngine.move(0, 0.5);
         else if (e.key === 'ArrowLeft' || e.key === 'a') moved = MapEngine.move(-0.5, 0);
         else if (e.key === 'ArrowRight' || e.key === 'd') moved = MapEngine.move(0.5, 0);
+        else if (e.key === 't') { MapEngine.trackObjects(); return; }
+        else if (e.key === 'b') { MapEngine.readLocation(); return; }
         else if (e.key === 'Escape') {
           worldActive = false;
           document.removeEventListener('keydown', handleWorldKey);

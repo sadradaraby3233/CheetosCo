@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.1.2
+  - Added zone system for named map areas (zone::minx:miny:minz:maxx:maxy:maxz:name).
+  - Press B to read your current zone/location.
+  - Press T to track nearby objects with direction and distance.
+  - Added named labels to map objects for better tracking announcements.
+
 Version 0.1.1
   - Fixed game startup on file:// protocol by adding a hardcoded map fallback.
   - Added distinct collision thud sound so you can hear when you hit a wall.
