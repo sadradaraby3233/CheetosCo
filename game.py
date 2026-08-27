@@ -44,8 +44,12 @@ class Game:
         self.menu.open(
             items=['Start Game', 'Load Game', 'Options', 'Exit'],
             on_select=self._main_menu_select,
-            on_back=None
+            on_back=self._main_menu_back
         )
+
+    def _main_menu_back(self):
+        # Escape on main menu exits the game
+        self.exit_game()
 
     def _main_menu_select(self, index, item):
         if index == 0:
@@ -72,7 +76,7 @@ class Game:
             self.speech.speak('Entered ' + m['name'] + '.')
         else:
             self.speech.speak('Entered the world.')
-        # Announce initial zone
+        # Set initial zone silently
         zone = self.map_engine.get_zone_at(
             self.map_engine.player['x'],
             self.map_engine.player['y'],
@@ -142,21 +146,7 @@ class Game:
         if not d:
             return
 
-        angle = d['angle']
-        abs_a = abs(angle)
-
-        if abs_a < 15:
-            dir_str = 'straight in front'
-        elif abs_a < 45:
-            dir_str = 'in front and slightly to the ' + ('right' if angle > 0 else 'left')
-        elif abs_a < 80:
-            dir_str = 'in front and to the ' + ('right' if angle > 0 else 'left')
-        elif abs_a < 100:
-            dir_str = 'directly to your ' + ('right' if angle > 0 else 'left')
-        elif abs_a < 150:
-            dir_str = 'behind and to the ' + ('right' if angle > 0 else 'left')
-        else:
-            dir_str = 'directly behind you'
+        name = target['props'].get('name') or target['props'].get('id') or target['type']
 
         if d['dist'] < 2:
             dist_str = ', very close'
@@ -167,8 +157,7 @@ class Game:
         else:
             dist_str = ', far away'
 
-        name = target['props'].get('name') or target['props'].get('id') or target['type']
-        self.speech.speak(name + ', ' + dir_str + dist_str)
+        self.speech.speak(name + ', ' + d['dir_str'] + dist_str)
 
     def exit_game(self):
         self.speech.speak('Goodbye!')
@@ -202,7 +191,7 @@ class Game:
 
         if moved:
             self.audio.play('step')
-            
+
             # Auto-announce zone changes
             zone = self.map_engine.get_zone_at(
                 self.map_engine.player['x'],
@@ -212,7 +201,7 @@ class Game:
             if zone and zone['name'] != self.last_zone_name:
                 self.last_zone_name = zone['name']
                 self.speech.speak(zone['name'])
-            
+
             if self.map_engine.check_arrival():
                 target = self.map_engine.get_target()
                 if target:
@@ -234,11 +223,10 @@ class Game:
                     self.beacon_timer = 0
                     d = self.map_engine.get_target_direction()
                     if d:
-                        pan = max(-1.0, min(1.0, d['pan']))
-                        self.audio.play_panned('beacon_mono', pan)
+                        self.audio.play_panned('beacon_mono', d['pan'])
 
-                        # Radar lock-on: if target is straight ahead, play lockon sound
-                        is_ahead = abs(d['angle']) < 15
+                        # Radar lock-on when target is straight ahead
+                        is_ahead = self.map_engine.is_target_ahead()
                         if is_ahead and not self.was_ahead:
                             self.audio.play_panned('lockon_mono', 0.0)
                         self.was_ahead = is_ahead

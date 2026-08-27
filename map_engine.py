@@ -123,9 +123,10 @@ class MapEngine:
         }
 
     def get_target_direction(self):
-        """Simple direction: no facing, just raw dx/dy relative to player.
-        -y = in front (north), +y = behind (south)
-        -x = left (west), +x = right (east)
+        """Simple direction using raw dx/dy.
+        Coordinate system:
+          -y = forward (north), +y = backward (south)
+          -x = left (west),     +x = right (east)
         """
         tpos = self.get_target_position()
         if not tpos:
@@ -135,32 +136,77 @@ class MapEngine:
         dy = tpos['y'] - self.player['y']
         dist = math.sqrt(dx * dx + dy * dy)
 
-        # Angle: 0 = straight ahead (north/-y), clockwise positive
-        # atan2(dx, -dy) gives 0 when target is directly ahead
-        angle = math.degrees(math.atan2(dx, -dy))
-        # angle is now -180..180 where:
-        #   0 = straight ahead
-        #   90 = directly right
-        #   -90 = directly left
-        #   180/-180 = directly behind
+        # Determine direction description from raw dx/dy
+        # dx > 0 means target is to the RIGHT
+        # dx < 0 means target is to the LEFT
+        # dy > 0 means target is BEHIND (south)
+        # dy < 0 means target is IN FRONT (north)
 
-        # Pan: -1 = full left, 0 = center, 1 = full right
-        pan = max(-1.0, min(1.0, angle / 90.0))
+        ahead_behind = ''
+        left_right = ''
+
+        # Front/back component
+        if dy < -1:
+            ahead_behind = 'in front'
+        elif dy > 1:
+            ahead_behind = 'behind'
+
+        # Left/right component
+        if dx > 1:
+            left_right = 'to the right'
+        elif dx < -1:
+            left_right = 'to the left'
+
+        # Build description
+        if ahead_behind and left_right:
+            # Diagonal
+            if abs(dx) < abs(dy) * 0.4:
+                # Mostly ahead/behind, slightly to the side
+                side = 'slightly ' + left_right
+                dir_str = ahead_behind + ' and ' + side
+            elif abs(dy) < abs(dx) * 0.4:
+                # Mostly to the side, slightly ahead/behind
+                fb = 'slightly ' + ahead_behind
+                dir_str = left_right + ' and ' + fb
+            else:
+                dir_str = ahead_behind + ' and ' + left_right
+        elif ahead_behind:
+            # Straight ahead or behind, check if slightly off center
+            if abs(dx) > 0.3:
+                side = 'very slightly to the ' + ('right' if dx > 0 else 'left')
+                dir_str = ahead_behind + ' and ' + side
+            else:
+                dir_str = 'straight ' + ahead_behind
+        elif left_right:
+            # Directly to the side
+            if abs(dy) > 0.3:
+                fb = 'very slightly ' + ahead_behind if ahead_behind else ''
+                dir_str = left_right
+            else:
+                dir_str = 'directly ' + left_right
+        else:
+            dir_str = 'right on top of you'
+
+        # Pan for audio: -1 = full left, 0 = center, 1 = full right
+        if dist > 0:
+            pan = max(-1.0, min(1.0, dx / dist))
+        else:
+            pan = 0.0
 
         return {
             'dist': dist,
-            'angle': angle,
-            'pan': pan,
             'dx': dx,
-            'dy': dy
+            'dy': dy,
+            'pan': pan,
+            'dir_str': dir_str
         }
 
     def is_target_ahead(self):
-        """Returns True if target is roughly straight ahead (within 15 degrees)."""
         d = self.get_target_direction()
         if not d:
             return False
-        return abs(d['angle']) < 15
+        # Target is "ahead" if it's mostly in front and roughly centered
+        return d['dy'] < -0.5 and abs(d['dx']) < max(2.0, abs(d['dy']) * 0.3)
 
     def check_arrival(self):
         if not self.tracked_target:
