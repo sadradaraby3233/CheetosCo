@@ -1,6 +1,12 @@
 CheetosCo — Changelog
 =====================
 
+Version 0.1.1
+  - Fixed game startup on file:// protocol by adding a hardcoded map fallback.
+  - Added distinct collision thud sound so you can hear when you hit a wall.
+  - Added Escape key to exit the world and return to the main menu.
+  - Added e.preventDefault() to world movement to stop page scrolling.
+
 Version 0.1.0
   - Implemented smooth exponential music fade-out for transitions.
   - Upgraded step sounds using bandpass filters for realistic tile footsteps.

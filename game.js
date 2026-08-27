@@ -43,28 +43,42 @@ const Game = (() => {
     }, true);
   }
   
-  function enterWorld() {
-    worldActive = true;
-    document.removeEventListener('keydown', MenuSystem.handleKey);
-    document.addEventListener('keydown', handleWorldKey);
-    const map = MapEngine.getCurrent();
-    SoundBank.speak('Entered ' + map.name + '.', 1.2);
-  }
-  
-  function handleWorldKey(e) {
-    if (!worldActive) return;
-    let moved = false;
-    if (e.key === 'ArrowUp' || e.key === 'w') moved = MapEngine.move(0, -0.5);
-    else if (e.key === 'ArrowDown' || e.key === 's') moved = MapEngine.move(0, 0.5);
-    else if (e.key === 'ArrowLeft' || e.key === 'a') moved = MapEngine.move(-0.5, 0);
-    else if (e.key === 'ArrowRight' || e.key === 'd') moved = MapEngine.move(0.5, 0);
-  
-    if (moved) {
-      SoundBank.step();
-    } else {
-      SoundBank.playTone(150, 0.05, 'sine', 0.1);
-    }
-  }
+      function enterWorld() {
+        worldActive = true;
+        document.removeEventListener('keydown', MenuSystem.handleKey);
+        document.addEventListener('keydown', handleWorldKey);
+        const map = MapEngine.getCurrent();
+        if (map) {
+          SoundBank.speak('Entered ' + map.name + '.', 1.2);
+        } else {
+          SoundBank.speak('Entered the world.', 1.2);
+        }
+      }
+
+      function handleWorldKey(e) {
+        if (!worldActive) return;
+        e.preventDefault();
+        let moved = false;
+        if (e.key === 'ArrowUp' || e.key === 'w') moved = MapEngine.move(0, -0.5);
+        else if (e.key === 'ArrowDown' || e.key === 's') moved = MapEngine.move(0, 0.5);
+        else if (e.key === 'ArrowLeft' || e.key === 'a') moved = MapEngine.move(-0.5, 0);
+        else if (e.key === 'ArrowRight' || e.key === 'd') moved = MapEngine.move(0.5, 0);
+        else if (e.key === 'Escape') {
+          worldActive = false;
+          document.removeEventListener('keydown', handleWorldKey);
+          document.addEventListener('keydown', MenuSystem.handleKey);
+          SoundBank.speak('Exited to menu.', 1.2);
+          openMainMenu();
+          return;
+        }
+        
+        if (moved) {
+          SoundBank.step();
+        } else {
+          SoundBank.playTone(120, 0.08, 'sawtooth', 0.2);
+          SoundBank.playNoise(0.05, 0.1);
+        }
+      }
 
   function loadGame() {
     SoundBank.speak('No save file found.');
