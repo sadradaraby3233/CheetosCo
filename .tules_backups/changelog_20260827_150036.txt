@@ -1,44 +1,14 @@
 CheetosCo — Changelog
 =====================
 
-Version 2.0.0
-  - Returned to JavaScript! Full rewrite back to the web stack.
-  - Restored: radio button widget, settings categories, chiptune menu music,
-    music fading, HRTF 3D audio via Web Audio PannerNode.
-  - Kept all fixes: raw dx/dy direction system, zone auto-announce,
-    radar lock-on, beacon with HRTF spatialization.
-  - Removed all Python files.
-  - Escape on main menu exits the app.
-
-Version 1.2.0
-  - COMPLETELY rewrote direction system. No more angle/atan2 confusion.
-    Now uses raw dx/dy to build descriptions like "in front and slightly to the left".
-  - Direction is now 100% consistent: dx>0 = right, dx<0 = left, dy<0 = in front, dy>0 = behind.
-  - Beacon panning uses dx/dist for accurate left/right stereo placement.
-  - Escape on main menu now exits the game.
-  - Zone auto-announce on movement.
-  - Radar lock-on triggers when target is roughly centered ahead.
-
-Version 1.1.1
-  - Fixed NPC spawning inside the reception desk (moved desk and NPC apart).
-  - Fixed zone labels: north/south were swapped in the map file.
-  - Zone changes now auto-announce when you walk into a new zone.
-  - Initial zone is set silently on world entry to avoid double-announcement.
-
-Version 1.1.0
-  - FIXED direction system: removed facing entirely. Direction is now pure dx/dy.
-    Left is ALWAYS left, right is ALWAYS right. No more confusion.
-  - Added radar lock-on sound: when a tracked target is straight in front,
-    a rising chirp plays to signal you are aligned.
-  - Better direction descriptions: "in front and slightly to the left",
-    "directly to your right", etc.
-  - Beacon panning now uses simple angle/90 mapping. Correct left/right.
-  - Rewrote audio with proper sweep generation for beacon and lockon.
-
 Version 1.0.3
   - Rewrote audio engine with stereo sound generation.
   - Implemented constant-power panning without DLL dependencies.
   - Added interaural time delay (ITD) for spatial audio.
+  - Beacon now pans based on target direction relative to player facing.
+  - Improved procedural sounds: bandpass-filtered steps, descending beacon sweep.
+  - Added player facing direction to W command output.
+  - Fixed tracking direction calculation.
 
 Version 1.0.2
   - Fixed accessible_output2 import path (accessible_output2.outputs.auto.Auto).

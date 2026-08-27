@@ -1,15 +1,6 @@
 CheetosCo — Changelog
 =====================
 
-Version 2.0.0
-  - Returned to JavaScript! Full rewrite back to the web stack.
-  - Restored: radio button widget, settings categories, chiptune menu music,
-    music fading, HRTF 3D audio via Web Audio PannerNode.
-  - Kept all fixes: raw dx/dy direction system, zone auto-announce,
-    radar lock-on, beacon with HRTF spatialization.
-  - Removed all Python files.
-  - Escape on main menu exits the app.
-
 Version 1.2.0
   - COMPLETELY rewrote direction system. No more angle/atan2 confusion.
     Now uses raw dx/dy to build descriptions like "in front and slightly to the left".
