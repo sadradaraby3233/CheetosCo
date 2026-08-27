@@ -1,0 +1,41 @@
+CheetosCo — Changelog
+=====================
+
+Version 0.0.8
+  - Fixed radio button hint timer: it no longer nags you after you already use the left/right arrow keys.
+
+Version 0.0.7
+  - Added inactivity hint for radio buttons ("Press left and right arrow keys to change" after 2s).
+  - Initial work on data-driven Map Engine (MapEngine).
+  - Added .map file parser (no ASCII, purely key-value headers and object placeholders).
+  - Created first map: maps/reception.map.
+
+Version 0.0.6
+  - Added radio button widget for settings with Left/Right arrow key support.
+  - Added 2-finger swipe support for Android to change radio options without triggering back gestures.
+  - Hidden Speech settings from the main Options menu on Android.
+  - Refactored Speech menu to use the new radio button widget.
+
+Version 0.0.5
+  - Added Speech settings menu to choose between Screen Reader and Browser TTS.
+  - Hidden Screen Reader option on Android (since TalkBack must be disabled to play).
+  - Increased menu TTS speech rate to 1.2x and reduced interrupt delay for snappier navigation.
+  - Settings are now saved to localStorage.
+
+Version 0.0.4
+  - Added NVDA/screen reader support via ARIA live regions.
+  - Added TTS interrupt flag to prevent speech overlap.
+  - Menu items no longer announce their position number unless Space is pressed to repeat.
+  - Fixed options menu speech queue issues.
+
+Version 0.0.3
+  - Built the audio menu system with keyboard navigation (Up/Down, Enter, Escape, Space, Home/End).
+
+Version 0.0.2
+  - Created the procedural sound bank (DSP) — all sounds generated via Web Audio API, no audio files.
+
+Version 0.0.1
+  - Made a basic index.html to support the webview for the game.
+
+Version 0.0.0
+  - Set up GitHub repo and doing tasks in the background.

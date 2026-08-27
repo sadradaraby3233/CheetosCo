@@ -1,38 +1,6 @@
 CheetosCo — Changelog
 =====================
 
-Version 1.0.1
-  - Removed all legacy JavaScript and HTML files.
-  - Project is now purely Python-based.
-  - Kept maps/reception.map as it is still used by the Python engine.
-
-Version 1.0.0
-  - Complete rewrite in Python using Pygame for keyboard input.
-  - Uses accessible_output2 (output.auto.auto) for screen reader speech.
-  - Borderless, invisible Pygame window captures keyboard only.
-  - Full menu system with stack-based navigation.
-  - Data-driven map engine with zones, objects, collision, and tracking.
-  - Beacon tracking system with T/W/B commands.
-  - Procedural audio for footsteps, beeps, and menu sounds.
-
-Version 0.3.1
-  - Rewrote HRTF 3D audio with correct coordinate mapping (game X/Y/Z to audio X/Z/Y).
-  - Fixed beaconBeep to actually produce sound when position is valid.
-  - Fixed direction calculation using proper atan2 with north-axis reference.
-  - Simplified and stabilized tracking menu state transitions.
-  - Added legacy Web Audio API fallback for older browsers.
-
-Version 0.3.0
-  - Implemented HRTF-based 3D audio system using Web Audio API PannerNode.
-  - Beacon beeps now use true 3D spatialization - you can hear the direction the sound is coming from.
-  - Fixed direction calculation: now properly accounts for player facing direction.
-  - Fixed tracking menu stack bug: pressing Escape now properly returns to world mode.
-  - Added listener position updates so 3D audio works correctly as you move.
-
-Version 0.2.1
-  - Fixed critical bug: tracking menu now properly switches between world and menu controls.
-  - The menu no longer stacks up when pressing Escape while in the tracking menu.
-
 Version 0.2.0
   - Added interactive tracking beacon system.
   - Press T to open a menu of trackable objects. Selecting one locks it as a target.

@@ -1,0 +1,14 @@
+CheetosCo — Changelog
+=====================
+
+Version 0.0.3
+  - Built the audio menu system with keyboard navigation (Up/Down, Enter, Escape, Space, Home/End).
+
+Version 0.0.2
+  - Created the procedural sound bank (DSP) — all sounds generated via Web Audio API, no audio files.
+
+Version 0.0.1
+  - Made a basic index.html to support the webview for the game.
+
+Version 0.0.0
+  - Set up GitHub repo and doing tasks in the background.

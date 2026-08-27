@@ -1,11 +1,6 @@
 CheetosCo — Changelog
 =====================
 
-Version 1.0.1
-  - Removed all legacy JavaScript and HTML files.
-  - Project is now purely Python-based.
-  - Kept maps/reception.map as it is still used by the Python engine.
-
 Version 1.0.0
   - Complete rewrite in Python using Pygame for keyboard input.
   - Uses accessible_output2 (output.auto.auto) for screen reader speech.
